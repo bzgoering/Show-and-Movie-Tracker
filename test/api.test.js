@@ -32,7 +32,7 @@ async function call(method, url, body) {
 }
 
 test('library starts empty', async () => {
-  assert.deepEqual((await call('GET', '/api/library')).body, []);
+  assert.deepEqual((await call('GET', '/api/library')).body.items, []);
 });
 
 test('search marks what is already in the library', async () => {
@@ -53,7 +53,7 @@ test('adding a show sets defaults and a prediction', async () => {
 test('adding the same title twice does not duplicate it', async () => {
   await call('POST', '/api/library', { type: 'tv', tmdbId: 100088 });
   const { body } = await call('GET', '/api/library');
-  assert.equal(body.filter((i) => i.id === 'tmdb-tv-100088').length, 1);
+  assert.equal(body.items.filter((i) => i.id === 'tmdb-tv-100088').length, 1);
 });
 
 test('updates label, progress and ended flag, and saves them to disk', async () => {
@@ -81,4 +81,43 @@ test('refresh and delete', async () => {
   assert.equal((await call('POST', '/api/library/tmdb-movie-27205/refresh')).status, 200);
   assert.equal((await call('DELETE', '/api/library/tmdb-movie-27205')).status, 204);
   assert.equal((await call('DELETE', '/api/library/tmdb-movie-27205')).status, 404);
+});
+
+test('progress past the newest aired episode is rejected', async () => {
+  await call('POST', '/api/library', { type: 'tv', tmdbId: 1396 }); // Breaking Bad: last episode S5 E16
+  const bad = await call('PATCH', '/api/library/tmdb-tv-1396', { progress: { season: 6, episode: 1 } });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /hasn't aired/);
+  assert.equal((await call('PATCH', '/api/library/tmdb-tv-1396', { progress: { season: 5, episode: 16 } })).status, 200);
+});
+
+test('syncOnStart refreshes every saved title before the first page load', async () => {
+  const f = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-sync-')), 'library.json');
+  const old = '2020-01-01T00:00:00.000Z';
+  await fs.writeFile(f, JSON.stringify({ items: [
+    { id: 'tmdb-tv-1396', tmdbId: 1396, type: 'tv', title: 'Old title', label: 'watching', progress: { season: 2, episode: 3 }, cache: { status: 'Returning Series', lastFetched: old } },
+    { id: 'tmdb-movie-27205', tmdbId: 27205, type: 'movie', title: 'Inception', label: 'planned', cache: { lastFetched: new Date().toISOString() } },
+    { id: 'tmdb-tv-999', tmdbId: 999, type: 'tv', title: 'Removed from TMDB', label: 'planned', progress: { season: 1, episode: 0 }, cache: { lastFetched: old } },
+  ] }));
+  process.env.TMDB_API_KEY = 'test';
+  const log = console.log;
+  console.log = () => {};
+  try {
+    const s = createApp({ store: createStore(f), tmdb: fakeTmdb, syncOnStart: true }).listen(0);
+    await new Promise((r) => s.once('listening', r));
+    const res = await (await fetch(`http://localhost:${s.address().port}/api/library`)).json();
+    s.close();
+
+    const bb = res.items.find((i) => i.id === 'tmdb-tv-1396');
+    assert.equal(bb.title, 'Breaking Bad', 'refreshed from TMDB');
+    assert.equal(bb.cache.status, 'Ended');
+    assert.deepEqual(bb.progress, { season: 2, episode: 3 }, 'user progress is kept');
+    assert.equal(bb.label, 'watching');
+    assert.equal(res.items.find((i) => i.id === 'tmdb-tv-999').title, 'Removed from TMDB', 'failed refresh keeps saved info');
+    assert.equal(res.sync.updated, 2, 'fresh items are refreshed on start too');
+    assert.equal(res.sync.failed, 1);
+  } finally {
+    console.log = log;
+    delete process.env.TMDB_API_KEY;
+  }
 });

@@ -3,12 +3,36 @@
 const countBefore = (seasons, seasonNumber) =>
   seasons.filter((s) => s.season < seasonNumber).reduce((sum, s) => sum + (s.episodeCount || 0), 0);
 
+// The newest episode that has aired, e.g. { season: 6, episode: 3 }, or null if nothing has aired.
+export function latestAired(cache = {}, today = new Date()) {
+  const last = cache.lastEpisode;
+  if (last && last.season && last.episode) return { season: last.season, episode: last.episode };
+  // No "last episode" from TMDB: fall back to the newest season that has premiered.
+  const iso = today.toISOString().slice(0, 10);
+  const started = (cache.seasons || []).filter((s) => s.airDate && s.airDate <= iso && s.episodeCount > 0);
+  const newest = started.sort((a, b) => b.season - a.season)[0];
+  return newest ? { season: newest.season, episode: newest.episodeCount } : null;
+}
+
+// Seasons trimmed to what has aired: later seasons are dropped and the newest one
+// only counts the episodes that are out. Used for the pickers so you can't pick the future.
+export function airedSeasons(cache = {}, today = new Date()) {
+  const latest = latestAired(cache, today);
+  if (!latest) return [];
+  return (cache.seasons || [])
+    .filter((s) => s.season <= latest.season)
+    .map((s) => (s.season === latest.season ? { ...s, totalEpisodes: s.episodeCount, episodeCount: latest.episode } : s));
+}
+
+export function isCaughtUp(progress, cache) {
+  const latest = latestAired(cache);
+  if (!latest || !progress) return true;
+  return progress.season > latest.season || (progress.season === latest.season && progress.episode >= latest.episode);
+}
+
 // Episodes that have actually aired so far.
 export function airedCount(cache = {}) {
-  const seasons = cache.seasons || [];
-  const last = cache.lastEpisode;
-  if (last && last.season) return countBefore(seasons, last.season) + last.episode;
-  return seasons.reduce((sum, s) => sum + (s.episodeCount || 0), 0);
+  return airedSeasons(cache).reduce((sum, s) => sum + (s.episodeCount || 0), 0);
 }
 
 // Episodes the user has watched, counting every episode up to and including their progress.

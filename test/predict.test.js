@@ -59,3 +59,44 @@ test('returns unknown with fewer than two dated seasons', () => {
   assert.equal(predictNextRelease({ status: 'Returning Series', seasons: seasons('2025-01-01') }, { today }).kind, 'unknown');
   assert.equal(predictNextRelease({}, { today }).kind, 'unknown');
 });
+
+const upcoming = (next, release) => ({ status: 'Returning Series', nextEpisode: next, release, seasons: seasons('2024-01-01', '2025-01-01', '2026-10-02') });
+
+test('mid-season weekly show: "Next episode" with the season finale', () => {
+  const p = predictNextRelease(
+    upcoming({ airDate: '2026-11-13', season: 3, episode: 7, name: 'The Trip' }, { season: 3, pattern: 'weekly', episodesInSeason: 10, finale: { episode: 10, airDate: '2026-12-04' } }),
+    { today },
+  );
+  assert.equal(p.scope, 'episode');
+  assert.equal(p.heading, 'Next episode');
+  assert.equal(p.episodeName, 'The Trip');
+  assert.deepEqual(p.finale, { episode: 10, airDate: '2026-12-04' });
+});
+
+test('binge show: "Next season" with every episode at once', () => {
+  const p = predictNextRelease(upcoming({ airDate: '2027-03-05', season: 4, episode: 1 }, { season: 4, pattern: 'all-at-once', episodesInSeason: 8 }), { today });
+  assert.equal(p.scope, 'season');
+  assert.equal(p.heading, 'Next season');
+  assert.equal(p.pattern, 'all-at-once');
+  assert.equal(p.episodeCount, 8);
+  assert.equal(p.finale, null);
+  assert.match(p.label, /all 8 episodes/);
+});
+
+test('weekly season premiere is a "Next season"', () => {
+  const p = predictNextRelease(upcoming({ airDate: '2027-01-10', season: 4, episode: 1 }, { season: 4, pattern: 'weekly', basedOnSeason: 3 }), { today });
+  assert.equal(p.scope, 'season');
+  assert.equal(p.pattern, 'weekly');
+});
+
+test('a season released in parts shows the next part', () => {
+  const p = predictNextRelease(upcoming({ airDate: '2026-12-25', season: 5, episode: 5 }, { season: 5, pattern: 'parts' }), { today });
+  assert.equal(p.scope, 'part');
+  assert.equal(p.heading, 'Next part');
+});
+
+test('estimates carry the last known release pattern', () => {
+  const p = predictNextRelease({ status: 'Returning Series', release: { pattern: 'all-at-once' }, seasons: seasons('2024-01-01', '2025-01-01') }, { today });
+  assert.equal(p.kind, 'estimated');
+  assert.equal(p.pattern, 'all-at-once');
+});

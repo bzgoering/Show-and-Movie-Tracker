@@ -14,7 +14,7 @@ const store = createStore(libraryFile);
 const result = await store.init();
 console.log(result === 'created' ? `Created an empty library at ${libraryFile}` : `Using library at ${libraryFile}`);
 
-const app = createApp({ store, tmdb, publicDir: path.join(root, 'public') });
+const app = createApp({ store, tmdb, publicDir: path.join(root, 'public'), syncOnStart: true });
 
 app.listen(port, () => {
   console.log(`Show & Movie Tracker running at http://localhost:${port}`);

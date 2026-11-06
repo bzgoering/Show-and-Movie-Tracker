@@ -1,6 +1,8 @@
 // Small client for The Movie Database (TMDB) API.
 // The key stays on the server; the browser only ever talks to our own /api routes.
 
+import { detectPattern } from './release.js';
+
 const BASE_URL = 'https://api.themoviedb.org/3';
 
 export class TmdbError extends Error {
@@ -92,6 +94,7 @@ export async function getDetails(type, tmdbId) {
 
   if (type === 'tv') {
     const t = await request(`/tv/${tmdbId}`);
+    const release = await getReleaseInfo(tmdbId, t);
     return {
       title: t.name,
       year: yearOf(t.first_air_date),
@@ -114,10 +117,39 @@ export async function getDetails(type, tmdbId) {
             episodeCount: s.episode_count || 0,
             airDate: s.air_date || null,
           })),
+        release,
         lastFetched: new Date().toISOString(),
       },
     };
   }
 
   throw new TmdbError(`Unknown type "${type}".`, 400);
+}
+
+async function getSeasonEpisodes(tmdbId, season) {
+  const data = await request(`/tv/${tmdbId}/season/${season}`);
+  return (data.episodes || []).map((e) => ({ episode: e.episode_number, airDate: e.air_date || null }));
+}
+
+// Looks at the upcoming (or most recent) season to see whether the show releases weekly
+// or drops whole seasons at once. If that season has no dates yet, the season before it
+// is used as a guide. Failures here never block adding a show.
+async function getReleaseInfo(tmdbId, t) {
+  const season =
+    t.next_episode_to_air?.season_number ||
+    t.last_episode_to_air?.season_number ||
+    Math.max(0, ...(t.seasons || []).map((s) => s.season_number));
+  if (!season) return null;
+
+  try {
+    const episodes = await getSeasonEpisodes(tmdbId, season);
+    const info = { season, episodesInSeason: episodes.length, ...detectPattern(episodes), basedOnSeason: season };
+    if (info.pattern === 'unknown' && season > 1) {
+      info.pattern = detectPattern(await getSeasonEpisodes(tmdbId, season - 1)).pattern;
+      info.basedOnSeason = season - 1;
+    }
+    return info;
+  } catch {
+    return null;
+  }
 }

@@ -1,7 +1,9 @@
 import express from 'express';
 import { predictNextRelease } from './predict.js';
 
-const STALE_MS = 24 * 60 * 60 * 1000;
+// If the app is left open, anything older than this is refreshed again on the next page load.
+const STALE_MS = 6 * 60 * 60 * 1000;
+const REFRESH_CONCURRENCY = 4;
 const LABELS = {
   movie: ['planned', 'watched'],
   tv: ['planned', 'watching', 'watched'],
@@ -24,7 +26,7 @@ function withPrediction(item) {
 const isStale = (item) => !item.cache?.lastFetched || Date.now() - Date.parse(item.cache.lastFetched) > STALE_MS;
 
 // `tmdb` is injected so tests can swap in a fake.
-export function createApp({ store, tmdb, publicDir }) {
+export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
   const app = express();
   app.use(express.json());
   if (publicDir) app.use(express.static(publicDir));
@@ -51,16 +53,51 @@ export function createApp({ store, tmdb, publicDir }) {
     res.json(results.map((r) => ({ ...r, inLibrary: owned.has(itemId(r.type, r.tmdbId)) })));
   }));
 
-  app.get('/api/library', wrap(async (req, res) => {
-    let data = await store.read();
-    if (process.env.TMDB_API_KEY && data.items.some(isStale)) {
-      // Refresh anything older than a day. If TMDB is down, the old data is kept.
-      data = await store.update(async (d) => {
-        await Promise.allSettled(d.items.filter(isStale).map(refreshItem));
-        return d;
-      });
+  // Refreshes saved titles from TMDB, a few at a time. User data (labels, progress) is never touched,
+  // and if TMDB can't be reached the saved info is kept as it was.
+  let lastSync = null;
+  async function refreshAll({ onlyStale = false } = {}) {
+    if (!process.env.TMDB_API_KEY) {
+      lastSync = { at: new Date().toISOString(), updated: 0, failed: 0, error: 'TMDB_API_KEY is not set.' };
+      return lastSync;
     }
-    res.json(data.items.map(withPrediction));
+    let updated = 0;
+    const errors = [];
+    await store.update(async (data) => {
+      const queue = data.items.filter((i) => !onlyStale || isStale(i));
+      async function worker() {
+        for (let item = queue.shift(); item; item = queue.shift()) {
+          try {
+            await refreshItem(item);
+            updated++;
+          } catch (err) {
+            errors.push(err.message);
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: REFRESH_CONCURRENCY }, worker));
+    });
+    lastSync = { at: new Date().toISOString(), updated, failed: errors.length, error: errors[0] || null };
+    if (updated || errors.length) {
+      console.log(`[sync] Updated ${updated} title${updated === 1 ? '' : 's'} from TMDB${errors.length ? `, ${errors.length} failed (${errors[0]})` : ''}.`);
+    }
+    return lastSync;
+  }
+
+  // The app usually isn't left running, so every start refreshes the whole library.
+  // The first page load waits for this so it never shows outdated info.
+  let startupSync = syncOnStart ? refreshAll().catch((err) => ({ error: err.message })) : null;
+  app.refreshAll = refreshAll;
+
+  app.get('/api/library', wrap(async (req, res) => {
+    if (startupSync) {
+      await startupSync;
+      startupSync = null;
+    } else if (process.env.TMDB_API_KEY && (await store.read()).items.some(isStale)) {
+      await refreshAll({ onlyStale: true });
+    }
+    const data = await store.read();
+    res.json({ items: data.items.map(withPrediction), sync: lastSync });
   }));
 
   app.post('/api/library', wrap(async (req, res) => {
@@ -115,6 +152,10 @@ export function createApp({ store, tmdb, publicDir }) {
           const episode = Number(body.progress?.episode);
           if (!Number.isInteger(season) || season < 1 || !Number.isInteger(episode) || episode < 0) {
             throw new HttpError(400, 'Progress needs a season of 1 or more and an episode of 0 or more.');
+          }
+          const last = found.cache?.lastEpisode;
+          if (last && (season > last.season || (season === last.season && episode > last.episode))) {
+            throw new HttpError(400, `S${season} E${episode} hasn't aired yet. The newest episode is S${last.season} E${last.episode}.`);
           }
           found.progress = { season, episode };
         }

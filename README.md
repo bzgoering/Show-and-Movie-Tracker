@@ -33,13 +33,15 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 - Search for any movie or TV show and add it with one click
 - Poster grid of everything you've added, with filters for Watching, Planned, Watched, Movies and Shows
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
-- Season and episode tracking for shows, with a button to mark the next episode watched
+- Season and episode tracking for shows. You can only pick episodes that have already aired.
+- One-click buttons to mark the next episode watched, or jump straight to the newest episode
 - Shows how many aired episodes you have left
-- Next release info for shows:
-  - the exact date when the next episode is scheduled
-  - an estimate for the next season based on how far apart past seasons premiered
-  - "Ended" when the show is over (you can also mark a show as ended yourself)
-- Show info refreshes from TMDB automatically once a day
+- "What's next" for each show, labeled so it's clear what's coming:
+  - **Next episode**: for weekly shows, the date of the next episode and when the season finale airs
+  - **Next season**: the premiere date, and whether the whole season drops at once or comes out weekly
+  - **Next season (estimate)**: if nothing is announced, a guess based on how far apart past seasons came out
+  - **Series ended**: when the show is over (you can also mark a show as ended yourself)
+- Every time the app starts, it updates all your saved titles from TMDB first, so you never see old info. If TMDB can't be reached, it shows your saved info instead.
 
 ## Tests
 ```bash

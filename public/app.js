@@ -1,4 +1,4 @@
-import { formatProgress, nextEpisode, remainingCount } from './progress.js';
+import { airedSeasons, formatProgress, isCaughtUp, latestAired, nextEpisode, remainingCount } from './progress.js';
 
 const IMG = 'https://image.tmdb.org/t/p/';
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', watched: 'Watched' };
@@ -60,12 +60,43 @@ function fmtDate(iso, { monthOnly = false } = {}) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
 }
 
-function releaseText(p) {
-  if (!p) return '';
-  if (p.kind === 'confirmed') return `S${p.season} E${p.episode} on ${fmtDate(p.date)}`;
-  if (p.kind === 'estimated') return p.overdue ? `S${p.season} overdue` : `S${p.season} expected ${fmtDate(p.date, { monthOnly: true })}`;
-  if (p.kind === 'ended') return 'Ended';
-  return '';
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function daysUntil(iso) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((new Date(`${iso}T00:00:00`) - today) / DAY_MS);
+}
+
+// Short "when" for cards: Today, Tomorrow, a weekday within the next week, otherwise a date.
+function shortWhen(iso) {
+  const days = daysUntil(iso);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  if (days > 1 && days < 7) return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+  return fmtDate(iso);
+}
+
+// Longer "when" for the detail view: "Friday, Nov 13 · in 7 days"
+function longWhen(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  const date = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
+  const days = daysUntil(iso);
+  const rel = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days > 1 ? `in ${days} days` : '';
+  return rel ? `${date} · ${rel}` : date;
+}
+
+// Tag + text shown under the poster, e.g. "Next episode · Fri" or "Full season · Mar 5".
+function cardRelease(p) {
+  if (!p) return null;
+  if (p.kind === 'confirmed') {
+    const tag = p.scope === 'episode' ? 'Next episode' : p.scope === 'part' ? 'Next part' : p.pattern === 'all-at-once' ? 'Full season' : 'New season';
+    return { tag, text: shortWhen(p.date), soon: daysUntil(p.date) < 7 };
+  }
+  if (p.kind === 'estimated') return { tag: 'New season', text: p.overdue ? 'overdue' : `~${fmtDate(p.date, { monthOnly: true })}` };
+  if (p.kind === 'ended') return { tag: '', text: 'Ended' };
+  return null;
 }
 
 function cardMeta(item) {
@@ -81,7 +112,7 @@ function renderGrid() {
   const items = state.items.filter(matchesFilter);
   grid.innerHTML = items
     .map((item) => {
-      const release = item.type === 'tv' && item.label !== 'watched' ? releaseText(item.prediction) : '';
+      const release = item.type === 'tv' ? cardRelease(item.prediction) : null;
       return `
       <button class="card" data-id="${esc(item.id)}" title="${esc(item.title)}">
         <div class="poster">
@@ -89,7 +120,11 @@ function renderGrid() {
         </div>
         <div class="card-title">${esc(item.title)}</div>
         <div class="card-meta"><span class="label ${item.label}">${LABEL_NAMES[item.label]}</span> · ${esc(cardMeta(item))}</div>
-        ${release ? `<div class="card-meta${item.prediction.kind === 'confirmed' ? ' soon' : ''}">${esc(release)}</div>` : ''}
+        ${
+          release
+            ? `<div class="card-next${release.soon ? ' soon' : ''}">${release.tag ? `<span class="next-tag">${esc(release.tag)}</span> ` : ''}${esc(release.text)}</div>`
+            : ''
+        }
       </button>`;
     })
     .join('');
@@ -213,48 +248,103 @@ function episodeOptions(seasons, season, selected) {
   return opts.join('');
 }
 
-function releaseSentence(p) {
-  if (p.kind === 'confirmed') return `Season ${p.season}, episode ${p.episode} comes out ${fmtDate(p.date)}.`;
-  if (p.kind === 'estimated') {
-    return p.overdue
-      ? `Season ${p.season} was expected around ${fmtDate(p.date, { monthOnly: true })} but hasn't been announced.`
-      : `Season ${p.season} will probably come out around ${fmtDate(p.date, { monthOnly: true })}.`;
+const PATTERN_NOTES = {
+  weekly: 'New episodes come out weekly.',
+  'all-at-once': 'This show releases whole seasons at once.',
+  parts: 'This show releases seasons in parts.',
+};
+
+// The "What's next" box in the detail view.
+function nextBox(p) {
+  let main = '';
+  let when = '';
+  const notes = [];
+
+  if (p.kind === 'confirmed') {
+    when = longWhen(p.date);
+    if (p.scope === 'episode') {
+      main = `S${p.season} E${p.episode}${p.episodeName ? ` · ${p.episodeName}` : ''}`;
+      if (p.pattern === 'weekly') notes.push(PATTERN_NOTES.weekly);
+      if (p.finale) notes.push(`Season finale (E${p.finale.episode}) on ${fmtDate(p.finale.airDate)}.`);
+    } else if (p.scope === 'part') {
+      main = `Season ${p.season}, next part (from E${p.episode})`;
+      notes.push(PATTERN_NOTES.parts);
+    } else if (p.pattern === 'all-at-once') {
+      main = `Season ${p.season} · all ${p.episodeCount ? `${p.episodeCount} ` : ''}episodes at once`;
+      notes.push(PATTERN_NOTES['all-at-once']);
+    } else {
+      main = `Season ${p.season} premiere`;
+      if (p.pattern === 'weekly') notes.push('After the premiere, new episodes come out weekly.');
+      else if (p.pattern === 'parts') notes.push(PATTERN_NOTES.parts);
+    }
+  } else if (p.kind === 'estimated') {
+    main = `Season ${p.season}`;
+    when = p.overdue
+      ? `Expected around ${fmtDate(p.date, { monthOnly: true })}, but not announced yet`
+      : `Around ${fmtDate(p.date, { monthOnly: true })} (estimate)`;
+    if (p.basis) notes.push(`${p.basis}.`);
+    if (PATTERN_NOTES[p.pattern]) notes.push(`Last season: ${PATTERN_NOTES[p.pattern].charAt(0).toLowerCase()}${PATTERN_NOTES[p.pattern].slice(1)}`);
+  } else if (p.kind === 'ended') {
+    main = p.label?.includes('you') ? 'You marked this series as finished' : `This series has ${p.label?.includes('canceled') ? 'been canceled' : 'ended'}`;
+  } else {
+    main = 'No new episodes announced';
   }
-  if (p.kind === 'ended') return p.label.includes('you') ? 'You marked this series as finished.' : `This series has ${p.label.includes('canceled') ? 'been canceled' : 'ended'}.`;
-  return 'No new episodes announced.';
+
+  const heading = p.kind === 'estimated' ? 'Next season (estimate)' : p.heading || "What's next";
+  return `
+    <div class="next-box ${esc(p.kind || 'unknown')}">
+      <div class="next-tag">${esc(heading)}</div>
+      <div class="next-main">${esc(main)}</div>
+      ${when ? `<div class="next-when">${esc(when)}</div>` : ''}
+      ${notes.length ? `<p class="muted small">${esc(notes.join(' '))}</p>` : ''}
+    </div>`;
 }
 
 function tvSection(item) {
   const c = item.cache || {};
-  const seasons = c.seasons || [];
+  const seasons = airedSeasons(c);
   const p = item.progress || { season: 1, episode: 0 };
+  const latest = latestAired(c);
   const next = nextEpisode(p, seasons);
+  const caughtUp = isCaughtUp(p, c);
   const left = remainingCount(item);
   const pred = item.prediction || {};
 
-  return `
-    <section class="detail-section">
-      <h3>Your progress</h3>
-      <p class="muted">Last watched: <strong>${esc(formatProgress(p))}</strong>${left > 0 ? ` · ${left} aired episode${left === 1 ? '' : 's'} left` : ' · All caught up'}</p>
+  const seasonLabel = (s) =>
+    s.totalEpisodes && s.totalEpisodes > s.episodeCount ? `${s.name} (${s.episodeCount} of ${s.totalEpisodes} out)` : `${s.name} (${s.episodeCount})`;
+
+  const pickers = seasons.length
+    ? `
       <div class="row">
         <label>Season
           <select id="season-select">
-            ${seasons.map((s) => `<option value="${s.season}"${s.season === p.season ? ' selected' : ''}>${esc(s.name)} (${s.episodeCount})</option>`).join('')}
+            ${seasons.map((s) => `<option value="${s.season}"${s.season === p.season ? ' selected' : ''}>${esc(seasonLabel(s))}</option>`).join('')}
           </select>
         </label>
         <label>Episode
           <select id="episode-select">${episodeOptions(seasons, p.season, p.episode)}</select>
         </label>
       </div>
-      <button id="next-ep" class="primary" ${next ? '' : 'disabled'}>
-        ${next ? `Mark S${next.season} E${next.episode} as watched` : 'No more episodes yet'}
-      </button>
+      <div class="row buttons">
+        ${
+          next
+            ? `<button id="next-ep" class="primary">Mark S${next.season} E${next.episode} as watched</button>`
+            : '<span id="next-ep" class="caught-up">✓ Caught up</span>'
+        }
+        ${latest && !caughtUp ? `<button id="latest-ep">Jump to latest (S${latest.season} E${latest.episode})</button>` : ''}
+      </div>`
+    : '<p class="muted small">No episodes have aired yet.</p>';
+
+  return `
+    <section class="detail-section">
+      <h3>Your progress</h3>
+      <p class="muted">Last watched: <strong>${esc(formatProgress(p))}</strong>${seasons.length ? (left > 0 ? ` · ${left} aired episode${left === 1 ? '' : 's'} left` : ' · All caught up') : ''}</p>
+      ${pickers}
     </section>
 
     <section class="detail-section">
       <h3>What's next</h3>
-      <p>${esc(releaseSentence(pred))}</p>
-      ${pred.basis ? `<p class="muted small">Estimated: ${esc(pred.basis.toLowerCase())}.</p>` : ''}
+      ${nextBox(pred)}
       <p class="muted small">TMDB status: ${esc(c.status || 'unknown')} · ${c.numberOfSeasons || 0} season${c.numberOfSeasons === 1 ? '' : 's'}, ${c.numberOfEpisodes || 0} episodes</p>
       <label class="check"><input type="checkbox" id="ended-toggle" ${item.userMarkedEnded ? 'checked' : ''}> This series has ended</label>
     </section>`;
@@ -318,8 +408,13 @@ detailBody.addEventListener('click', async (e) => {
   if (labelBtn) return save({ label: labelBtn.dataset.label });
 
   if (e.target.id === 'next-ep') {
-    const next = nextEpisode(item.progress, item.cache?.seasons);
+    const next = nextEpisode(item.progress, airedSeasons(item.cache));
     if (next) return setProgress(item, next);
+  }
+
+  if (e.target.id === 'latest-ep') {
+    const latest = latestAired(item.cache);
+    if (latest) return setProgress(item, latest);
   }
 
   if (e.target.id === 'refresh-btn') {
@@ -369,13 +464,34 @@ detailBody.addEventListener('change', (e) => {
 
 // ---------- Start ----------
 
+function showSync(sync) {
+  const el = $('#sync-status');
+  if (!sync) {
+    el.textContent = '';
+    return;
+  }
+  if (sync.failed && !sync.updated) {
+    showMessage(`Couldn't update from TMDB (${sync.error}). Showing your saved info.`);
+  } else if (sync.error && !sync.failed) {
+    showMessage(`Search and updates are off: ${sync.error} See the README for setup.`);
+  }
+  const time = new Date(sync.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  el.textContent = sync.updated ? `Updated ${time}` : '';
+}
+
 async function load() {
+  $('#sync-status').textContent = 'Updating…';
+  grid.classList.add('loading');
   try {
-    state.items = await api('/api/library');
+    const { items, sync } = await api('/api/library');
+    state.items = items;
     showMessage('');
+    showSync(sync);
   } catch (err) {
+    $('#sync-status').textContent = '';
     showMessage(`Could not load your library: ${err.message}`);
   }
+  grid.classList.remove('loading');
   renderGrid();
 }
 
