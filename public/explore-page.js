@@ -101,6 +101,17 @@ async function loadResults() {
   if (type === ex.type) renderResults();
 }
 
+// The match % with what it means in words, on hover (README "What the match % means" has the details).
+// With an empty library there's nothing to match against, so the server sends no % and the card says Trending.
+function matchMeaning(m) {
+  if (m >= 85) return 'Strong match: very likely your kind of thing';
+  if (m >= 70) return 'Good match: likely your kind of thing';
+  if (m >= 50) return 'Possible match: might be your kind of thing';
+  return 'Long shot: probably not your kind of thing';
+}
+const matchTag = (c) =>
+  c.match == null ? '<span class="match">Trending</span>' : `<span class="match" title="${esc(matchMeaning(c.match))}">${c.match}% match</span>`;
+
 function renderResults() {
   const items = ex.results.get(ex.type) || [];
   exploreGrid.innerHTML = items
@@ -110,7 +121,7 @@ function renderResults() {
         <button class="card" data-key="${esc(keyOf(c))}" title="${esc(c.title)}">
           <div class="poster"><img src="${poster(c.posterPath)}" alt="" loading="lazy"></div>
           <div class="card-title">${esc(c.title)}</div>
-          <div class="card-meta"><span class="match">${c.match}% match</span> · ${c.type === 'tv' ? 'TV' : 'Movie'}${c.year ? ` · ${c.year}` : ''}</div>
+          <div class="card-meta">${matchTag(c)} · ${c.type === 'tv' ? 'TV' : 'Movie'}${c.year ? ` · ${c.year}` : ''}</div>
           <div class="card-providers">${providerStrip(c.providers)}</div>
         </button>
         ${c.added ? '' : `<button class="dismiss" data-key="${esc(keyOf(c))}" title="Not interested" aria-label="Not interested in ${esc(c.title)}">✕</button>`}
@@ -252,7 +263,7 @@ function openSuggestion(key) {
       <img class="detail-poster" src="${poster(c.posterPath)}" alt="">
       <div>
         <h2>${esc(c.title)}</h2>
-        <p class="muted">${c.type === 'tv' ? 'TV show' : 'Movie'}${c.year ? ` · ${c.year}` : ''} · <span class="match">${c.match}% match</span></p>
+        <p class="muted">${c.type === 'tv' ? 'TV show' : 'Movie'}${c.year ? ` · ${c.year}` : ''} · ${matchTag(c)}</p>
         <p class="muted small">${esc(c.reason)}</p>
         <div class="row buttons">
           ${

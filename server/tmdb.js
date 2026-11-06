@@ -86,7 +86,8 @@ export async function getDetails(type, tmdbId) {
       cache: {
         status: m.status || '',
         releaseDate: m.release_date || null,
-        genres: (m.genres || []).map((g) => g.name), // used for sorting only
+        genres: (m.genres || []).map((g) => g.name), // for the genre picker and Explore (never shown on cards)
+        originalLanguage: m.original_language || null, // e.g. "ja"; Explore uses it to learn what you watch
         runtime: m.runtime || null,
         lastFetched: new Date().toISOString(),
       },
@@ -104,7 +105,8 @@ export async function getDetails(type, tmdbId) {
       cache: {
         status: t.status || '',
         firstAirDate: t.first_air_date || null,
-        genres: (t.genres || []).map((g) => g.name), // used for sorting only
+        genres: (t.genres || []).map((g) => g.name), // for the genre picker and Explore (never shown on cards)
+        originalLanguage: t.original_language || null, // e.g. "ja"; Explore uses it to learn what you watch
         inProduction: Boolean(t.in_production),
         numberOfSeasons: t.number_of_seasons || 0,
         numberOfEpisodes: t.number_of_episodes || 0,
@@ -171,6 +173,7 @@ function toCandidate(r, fallbackType) {
     posterPath: r.poster_path || null,
     overview: r.overview || '',
     genreIds: r.genre_ids || [],
+    originalLanguage: r.original_language || null,
     voteAverage: r.vote_average || 0,
     voteCount: r.vote_count || 0,
     popularity: r.popularity || 0,

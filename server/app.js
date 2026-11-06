@@ -20,10 +20,11 @@ class HttpError extends Error {
 const itemId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;
 
 // Remembers what you did with an Explore suggestion and what its score was based on,
-// so Explore can learn which signals match your taste (see learnWeights in explore.js).
+// so Explore can learn which signals match your taste (see learnWeights in explore.js)
+// and check its match numbers against what you pick (score = the match before that check; see calibrationShift).
 function recordFeedback(data, type, tmdbId, action, extra = {}) {
   const s = recentSuggestion(`${type}-${tmdbId}`);
-  data.feedback = [...(data.feedback || []), { key: `${type}-${tmdbId}`, action, match: s?.match ?? null, parts: s?.parts ?? null, ...extra, at: new Date().toISOString() }].slice(-500);
+  data.feedback = [...(data.feedback || []), { key: `${type}-${tmdbId}`, action, match: s?.match ?? null, score: s?.score ?? null, parts: s?.parts ?? null, ...extra, at: new Date().toISOString() }].slice(-500);
 }
 
 function withPrediction(item) {

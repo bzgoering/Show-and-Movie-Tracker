@@ -21,7 +21,7 @@ beforeEach(() => { process.env.TMDB_API_KEY = 'abc123'; });
 afterEach(() => { globalThis.fetch = realFetch; delete process.env.TMDB_API_KEY; });
 
 const show = {
-  id: 1, name: 'Weekly Show', first_air_date: '2024-10-01', genres: [{ id: 18, name: 'Drama' }, { id: 35, name: 'Comedy' }], poster_path: '/p.jpg', overview: '', status: 'Returning Series', in_production: true,
+  id: 1, name: 'Weekly Show', first_air_date: '2024-10-01', original_language: 'ko', genres: [{ id: 18, name: 'Drama' }, { id: 35, name: 'Comedy' }], poster_path: '/p.jpg', overview: '', status: 'Returning Series', in_production: true,
   number_of_seasons: 2, number_of_episodes: 18, last_air_date: '2026-11-06',
   last_episode_to_air: { season_number: 2, episode_number: 6, air_date: '2026-11-06', name: 'Six' },
   next_episode_to_air: { season_number: 2, episode_number: 7, air_date: '2026-11-13', name: 'Seven' },
@@ -43,6 +43,7 @@ test('TV details include the release pattern of the airing season', async () => 
   assert.equal(d.cache.nextEpisode.episode, 7);
   assert.deepEqual(d.cache.genres, ['Drama', 'Comedy']);
   assert.equal(d.cache.firstAirDate, '2024-10-01');
+  assert.equal(d.cache.originalLanguage, 'ko', 'saved so Explore can learn which languages you watch');
   assert.equal(requests[0].apiKey, 'abc123');
 });
 
@@ -101,7 +102,10 @@ test('service list merges movie and TV services, most popular in the region firs
 });
 
 test('recommendations become candidates with genre ids and ratings', async () => {
-  stub({ '/3/tv/1/recommendations': { results: [{ id: 5, media_type: 'tv', name: 'Rec Show', first_air_date: '2021-03-01', poster_path: '/r.jpg', genre_ids: [18], vote_average: 8.1, vote_count: 900, popularity: 50 }] } });
+  stub({ '/3/tv/1/recommendations': { results: [{ id: 5, media_type: 'tv', name: 'Rec Show', first_air_date: '2021-03-01', poster_path: '/r.jpg', genre_ids: [18], original_language: 'ja', vote_average: 8.1, vote_count: 900, popularity: 50 }] } });
   const [c] = await tmdb.recommendations('tv', 1);
-  assert.deepEqual({ id: c.tmdbId, type: c.type, title: c.title, year: c.year, genres: c.genreIds, vote: c.voteAverage }, { id: 5, type: 'tv', title: 'Rec Show', year: 2021, genres: [18], vote: 8.1 });
+  assert.deepEqual(
+    { id: c.tmdbId, type: c.type, title: c.title, year: c.year, genres: c.genreIds, lang: c.originalLanguage, vote: c.voteAverage },
+    { id: 5, type: 'tv', title: 'Rec Show', year: 2021, genres: [18], lang: 'ja', vote: 8.1 },
+  );
 });

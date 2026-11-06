@@ -5,7 +5,7 @@ const CATALOG = {
     search: { tmdbId: 27205, type: 'movie', title: 'Inception', year: 2010, posterPath: '/inception.jpg', overview: 'A thief who steals secrets through dreams.' },
     details: {
       title: 'Inception', year: 2010, posterPath: '/inception.jpg', overview: 'A thief who steals secrets through dreams.',
-      cache: { status: 'Released', releaseDate: '2010-07-15', runtime: 148 },
+      cache: { status: 'Released', releaseDate: '2010-07-15', originalLanguage: 'en', runtime: 148 },
     },
   },
   'tv-1396': {
@@ -13,7 +13,7 @@ const CATALOG = {
     details: {
       title: 'Breaking Bad', year: 2008, posterPath: '/bb.jpg', overview: 'A chemistry teacher turns to crime.',
       cache: {
-        status: 'Ended', inProduction: false, numberOfSeasons: 5, numberOfEpisodes: 62,
+        status: 'Ended', originalLanguage: 'en', inProduction: false, numberOfSeasons: 5, numberOfEpisodes: 62,
         lastAirDate: '2013-09-29', lastEpisode: { airDate: '2013-09-29', season: 5, episode: 16, name: 'Felina' }, nextEpisode: null,
         seasons: [
           { season: 1, name: 'Season 1', episodeCount: 7, airDate: '2008-01-20' },
@@ -30,7 +30,7 @@ const CATALOG = {
     details: {
       title: 'The Last of Us', year: 2023, posterPath: '/tlou.jpg', overview: 'Survivors cross a ruined America.',
       cache: {
-        status: 'Returning Series', inProduction: true, numberOfSeasons: 2, numberOfEpisodes: 16,
+        status: 'Returning Series', originalLanguage: 'en', inProduction: true, numberOfSeasons: 2, numberOfEpisodes: 16,
         lastAirDate: '2025-05-25', lastEpisode: { airDate: '2025-05-25', season: 2, episode: 7, name: 'Convergence' }, nextEpisode: null,
         seasons: [
           { season: 1, name: 'Season 1', episodeCount: 9, airDate: '2023-01-15' },
@@ -66,13 +66,13 @@ const GENRES = {
 };
 const cand = (tmdbId, type, title, genreIds, voteAverage, extra = {}) => ({
   tmdbId, type, title, year: 2020, releaseDate: '2020-01-01', posterPath: `/c${tmdbId}.jpg`, overview: `${title} overview`,
-  genreIds, voteAverage, voteCount: 2000, popularity: 100, ...extra,
+  genreIds, originalLanguage: 'en', voteAverage, voteCount: 2000, popularity: 100, ...extra,
 });
 export const EXPLORE = {
   'tv-1396': [cand(1, 'tv', 'Better Call Saul', [18, 80], 8.9), cand(2, 'tv', 'Ozark', [18, 80], 8.2), cand(3, 'movie', 'El Camino', [80, 18], 7.0)],
   'tv-100088': [cand(4, 'tv', 'Station Eleven', [18, 10765], 7.9), cand(2, 'tv', 'Ozark', [18, 80], 8.2), cand(11, 'tv', 'Arcane', [16, 10765, 10759], 8.7)],
   'movie-27205': [cand(5, 'movie', 'Interstellar', [878, 18], 8.6), cand(6, 'movie', 'Tenet', [28, 878], 7.2)],
-  discover: { movie: [cand(7, 'movie', 'Funny Movie', [35], 6.5), cand(5, 'movie', 'Interstellar', [878, 18], 8.6)], tv: [cand(8, 'tv', 'Sitcom', [35], 7.0), cand(9, 'tv', 'Scary Show', [27], 6.0, { posterPath: null }), cand(12, 'tv', 'Frieren', [16, 10759, 10765], 8.9)] },
+  discover: { movie: [cand(7, 'movie', 'Funny Movie', [35], 6.5), cand(5, 'movie', 'Interstellar', [878, 18], 8.6)], tv: [cand(8, 'tv', 'Sitcom', [35], 7.0), cand(9, 'tv', 'Scary Show', [27], 6.0, { posterPath: null }), cand(12, 'tv', 'Frieren', [16, 10759, 10765], 8.9, { originalLanguage: 'ja' })] },
   trending: [cand(10, 'movie', 'Trending Movie', [28], 7.5)],
 };
 const NETFLIX = { id: 8, name: 'Netflix', logoPath: '/netflix.jpg' };

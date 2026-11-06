@@ -50,16 +50,35 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 - Every time the app starts, it updates all your saved titles from TMDB first, so you never see old info. If TMDB can't be reached, it shows your saved info instead.
 
 ## Explore
-The **Explore** tab suggests movies and shows you'll probably like, best match first. It looks at the genres you watch most, whether you lean toward movies or shows, which of your titles TMDB recommends things for, and ratings. Titles you've watched count more than ones you've only planned.
+The **Explore** tab suggests movies and shows you'll probably like, best match first. It looks at which of your titles TMDB recommends things for, the genres and languages you watch, whether you lean toward movies or shows, and ratings.
 
-- Each suggestion shows a match score, why it was suggested, and where it's streaming
+- Each suggestion shows a match %, why it was suggested (in its details), and where it's streaming. With an empty library it shows what's trending instead, with no %.
 - Tabs for **All**, **Movies**, **Live-action shows** and **Anime & cartoons** (shows TMDB tags as Animation)
 - Click **Streaming** to pick the services you have, and Explore will only suggest titles on them. Your picks and country are saved in `data/library.json`.
 - Set your country with the Country picker (or `WATCH_REGION` in `.env`, default `US`)
 - Add a suggestion straight from its details: **Add to Planned** to watch later, or **Watched** if you've already seen it (shows are marked caught up)
 - Not interested in something? Click the ✕ on its poster (or **Not interested** in its details). It's hidden for good, and Explore suggests a little less like it. Undo right away, or bring titles back from the **hidden** list.
 
-**How Explore learns.** Your library is the main signal. Hidden titles act as a counterweight, not a veto: a genre only counts against a suggestion as far as you hide it more than you watch it, and titles similar to ones you hid get a small penalty. Every add and hide from Explore is saved with what the score was based on. Once you've added at least 3 suggestions and hidden at least 2, Explore compares the two groups and shifts weight toward the signals that predicted your adds (each by at most half). The line above the suggestions shows your picks and hit rate, and says "tuned to your picks" once this is active.
+**How much each title in your library counts.** Explore looks at what you've actually done with each title, not just its label:
+- A show you finished (or are caught up on, including **Waiting**) counts most. A movie you watched counts a little less, since it's a smaller commitment.
+- A show you're partway through counts more the further in you are.
+- A show that looks dropped (stuck near the start and untouched for two months) barely counts, and isn't used to find suggestions. If you never set episodes on any show, this check is skipped.
+- Planned titles show what you're curious about, so they count a little. Ones you saved from Explore count even less, so Explore doesn't just hear its own suggestions back.
+
+**What the match % means.** It's how strongly your library points to a title, so it means the same thing on every tab:
+- **85% and up (strong match):** several titles you love point to it, or one does and it closely fits what you watch.
+- **70–84% (good match):** a show you finished or are well into, or a movie you watched, points to it.
+- **50–69% (possible match):** only weaker signs point to it, such as titles you've saved, or it's popular and close to the genres you watch.
+- **Below 50% (long shot):** little in common with your library.
+
+How it's worked out:
+- **Recommendations** are the strongest sign. Each of your titles that TMDB says is similar adds to the score, weighted by how much that title counts (see above). More titles pointing to the same suggestion add up, with diminishing returns. Saved titles together never count for more than two of them.
+- **Genres** come next: how closely a title's genres match the ones you watch most, using your movie genres for movies and your show genres for shows. A close genre match on its own is a decent sign but never a strong one, and counts less while your library is small. Drama is on about half of everything, so it counts as half a genre.
+- **Trims:** a below-par rating takes up to 30% off (ratings with few votes are trusted less; a great rating keeps the score but doesn't add to it). A type you rarely watch (movies vs shows), or a language you never watch, takes up to 10% off each.
+- Every title starts at 10%, because with nothing for or against it, anyone might like it. The top is 99%: Explore is never certain.
+- Titles that haven't come out yet are left out.
+
+**How Explore learns.** Your library is the main signal. Hidden titles act as a counterweight, not a veto: a genre only counts against a suggestion as far as you hide it more than you watch it, and titles similar to ones you hid get a small penalty. Every add and hide from Explore is saved with what the score was based on. Once you've added at least 3 suggestions and hidden at least 2, Explore compares the two groups and shifts weight toward the signals that predicted your adds (each by at most half). After 10 picks (at least 3 adds and 3 hides), it also checks its numbers against what you do: if the suggestions you acted on averaged 80% but you added only 4 in 10, every match comes down a little (half the gap, at most 10 points), and the other way round if you add more than the numbers suggest. The order doesn't change. The line above the suggestions shows your picks and hit rate, and says "tuned to your picks" once either of these is active.
 
 Streaming info comes from [JustWatch](https://www.justwatch.com/) through TMDB.
 
