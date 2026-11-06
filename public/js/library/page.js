@@ -14,11 +14,13 @@ import { library } from './store.js';
 const TABS = ['all', 'watching', 'waiting', 'planned', 'watched', 'movie', 'tv'];
 const SORT_KEY = 'sort';
 
+const savedSort = readStored(localStorage, SORT_KEY, 'title');
+
 const state = {
   tab: 'all',
   query: '',
   genre: '',
-  sort: Object.hasOwn(SORTS, readStored(localStorage, SORT_KEY, '')) ? readStored(localStorage, SORT_KEY, '') : 'title',
+  sort: Object.hasOwn(SORTS, savedSort) ? savedSort : 'title',
 };
 
 const el = {

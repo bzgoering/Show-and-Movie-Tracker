@@ -132,7 +132,7 @@ function render(item) {
     <div class="detail-head">
       ${item.posterPath ? `<img class="detail-poster" src="${poster(item.posterPath)}" alt="">` : ''}
       <div>
-        <h2>${esc(item.title)}</h2>
+        <h2 id="detail-title">${esc(item.title)}</h2>
         <p class="muted">${item.type === 'tv' ? 'TV show' : 'Movie'}${factText ? ` · ${esc(factText)}` : ''}</p>
         <div class="label-picker" role="group" aria-label="Label">${labels}</div>
         ${item.overview ? `<p class="overview">${esc(item.overview)}</p>` : ''}

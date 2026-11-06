@@ -194,7 +194,7 @@ async function showHiddenList() {
     )
     .join('');
   openDialog(
-    `<h2>Hidden from Explore</h2>
+    `<h2 id="detail-title">Hidden from Explore</h2>
      <p class="muted small">Titles you marked "Not interested". Explore won't suggest them, and suggests a little less like them.</p>
      <ul class="hidden-list">${rows}</ul>`,
     {
@@ -222,7 +222,7 @@ function suggestionHtml(c) {
     <div class="detail-head">
       <img class="detail-poster" src="${poster(c.posterPath)}" alt="">
       <div>
-        <h2>${esc(c.title)}</h2>
+        <h2 id="detail-title">${esc(c.title)}</h2>
         <p class="muted">${typeYear(c, true)} · ${matchTag(c)}</p>
         <p class="muted small">${esc(c.reason)}</p>
         <div class="row buttons">${actions}</div>
