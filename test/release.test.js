@@ -11,15 +11,33 @@ test('weekly when episodes come out on different dates', () => {
 });
 
 test('weekly also covers a two-episode premiere', () => {
-  assert.equal(detectPattern(eps('2026-10-02', '2026-10-02', '2026-10-09', '2026-10-16', '2026-10-23')).pattern, 'weekly');
+  assert.equal(
+    detectPattern(eps('2026-10-02', '2026-10-02', '2026-10-09', '2026-10-16', '2026-10-23')).pattern,
+    'weekly',
+  );
 });
 
 test('all-at-once when the whole season shares a date', () => {
-  assert.equal(detectPattern(eps('2027-03-05', '2027-03-05', '2027-03-05', '2027-03-05', '2027-03-05', '2027-03-05')).pattern, 'all-at-once');
+  assert.equal(
+    detectPattern(eps('2027-03-05', '2027-03-05', '2027-03-05', '2027-03-05', '2027-03-05', '2027-03-05')).pattern,
+    'all-at-once',
+  );
 });
 
 test('parts when a season drops in a few big chunks', () => {
-  const r = detectPattern(eps('2022-05-27', '2022-05-27', '2022-05-27', '2022-05-27', '2022-05-27', '2022-05-27', '2022-05-27', '2022-07-01', '2022-07-01'));
+  const r = detectPattern(
+    eps(
+      '2022-05-27',
+      '2022-05-27',
+      '2022-05-27',
+      '2022-05-27',
+      '2022-05-27',
+      '2022-05-27',
+      '2022-05-27',
+      '2022-07-01',
+      '2022-07-01',
+    ),
+  );
   assert.equal(r.pattern, 'parts');
 });
 

@@ -15,7 +15,10 @@ export class TmdbError extends Error {
 
 function getKey() {
   // Tolerate quotes or a pasted "Bearer " prefix around the key.
-  const key = (process.env.TMDB_API_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '');
+  const key = (process.env.TMDB_API_KEY || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/^Bearer\s+/i, '');
   if (!key) {
     throw new TmdbError('TMDB_API_KEY is not set. Copy .env.example to .env and add your key.', 500);
   }
@@ -211,7 +214,9 @@ export async function discover(type, params = {}) {
 
 export async function trending() {
   const data = await request('/trending/all/week');
-  return (data.results || []).filter((r) => r.media_type === 'movie' || r.media_type === 'tv').map((r) => toCandidate(r));
+  return (data.results || [])
+    .filter((r) => r.media_type === 'movie' || r.media_type === 'tv')
+    .map((r) => toCandidate(r));
 }
 
 const toProvider = (p) => ({ id: p.provider_id, name: p.provider_name, logoPath: p.logo_path || null });
@@ -231,7 +236,9 @@ export async function watchProviders(type, tmdbId, region) {
 
 // Every streaming service available in a country, most popular first.
 export async function providerList(region) {
-  const lists = await Promise.all(['movie', 'tv'].map((type) => request(`/watch/providers/${type}`, { watch_region: region })));
+  const lists = await Promise.all(
+    ['movie', 'tv'].map((type) => request(`/watch/providers/${type}`, { watch_region: region })),
+  );
   const byId = new Map();
   for (const p of lists.flatMap((l) => l.results || [])) {
     const priority = p.display_priorities?.[region] ?? p.display_priority ?? 999;

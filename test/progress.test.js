@@ -44,7 +44,11 @@ const airing = { seasons, lastEpisode: { season: 2, episode: 4 } };
 
 test('pickers only include aired seasons and episodes', () => {
   const aired = airedSeasons(airing);
-  assert.deepEqual(aired.map((s) => s.season), [1, 2], 'season 3 has not started');
+  assert.deepEqual(
+    aired.map((s) => s.season),
+    [1, 2],
+    'season 3 has not started',
+  );
   assert.equal(aired[1].episodeCount, 4, 'only 4 of 10 episodes are out');
   assert.equal(aired[1].totalEpisodes, 10);
 });
@@ -67,14 +71,25 @@ test('nothing aired yet means no seasons to pick', () => {
 });
 
 test('without a last episode, falls back to seasons that have premiered', () => {
-  const cache = { seasons: [{ season: 1, episodeCount: 8, airDate: '2020-01-01' }, { season: 2, episodeCount: 8, airDate: '2099-01-01' }] };
+  const cache = {
+    seasons: [
+      { season: 1, episodeCount: 8, airDate: '2020-01-01' },
+      { season: 2, episodeCount: 8, airDate: '2099-01-01' },
+    ],
+  };
   assert.deepEqual(latestAired(cache), { season: 1, episode: 8 });
 });
 
 import { statusOf } from '../public/progress.js';
 
 test('caught-up Watching shows with more coming show as Waiting', () => {
-  const show = (progress, prediction, label = 'watching') => ({ type: 'tv', label, progress, cache: airing, prediction });
+  const show = (progress, prediction, label = 'watching') => ({
+    type: 'tv',
+    label,
+    progress,
+    cache: airing,
+    prediction,
+  });
   assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'confirmed' })), 'waiting');
   assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'estimated' })), 'waiting');
   assert.equal(statusOf(show({ season: 2, episode: 3 }, { kind: 'confirmed' })), 'watching', 'not caught up');
@@ -89,14 +104,21 @@ import { currentEpisode, progressForCurrent, progressSummary } from '../public/p
 test('the episode you are on is the one after your last watched', () => {
   const show = (progress, prediction) => ({ type: 'tv', progress, cache: airing, prediction });
   assert.deepEqual(currentEpisode(show({ season: 1, episode: 0 })), { season: 1, episode: 1 });
-  assert.deepEqual(currentEpisode(show({ season: 1, episode: 8 })), { season: 2, episode: 1 }, 'rolls into next season');
+  assert.deepEqual(
+    currentEpisode(show({ season: 1, episode: 8 })),
+    { season: 2, episode: 1 },
+    'rolls into next season',
+  );
   assert.deepEqual(currentEpisode(show({ season: 2, episode: 3 })), { season: 2, episode: 4 });
   assert.equal(currentEpisode(show({ season: 2, episode: 4 })), null, 'caught up on the newest episode');
 
   assert.equal(progressSummary(show({ season: 2, episode: 3 })), 'On S2 E4');
   assert.equal(progressSummary(show({ season: 2, episode: 4 }, { kind: 'confirmed' })), 'Caught up');
   assert.equal(progressSummary(show({ season: 2, episode: 4 }, { kind: 'ended' })), 'Finished');
-  assert.equal(progressSummary({ type: 'tv', progress: { season: 1, episode: 0 }, cache: { seasons: [] } }), 'Not out yet');
+  assert.equal(
+    progressSummary({ type: 'tv', progress: { season: 1, episode: 0 }, cache: { seasons: [] } }),
+    'Not out yet',
+  );
 });
 
 test('picking "I am on S2 E4" saves S2 E3 as last watched', () => {

@@ -32,7 +32,10 @@ export function engagement(item) {
   const p = item.progress || { season: 1, episode: 0 };
   const started = hasStarted(p);
   const latest = latestAired(cache);
-  const caughtUp = Boolean(latest) && started && (p.season > latest.season || (p.season === latest.season && p.episode >= latest.episode));
+  const caughtUp =
+    Boolean(latest) &&
+    started &&
+    (p.season > latest.season || (p.season === latest.season && p.episode >= latest.episode));
   const aired = latest ? airedCount(cache) : 0;
   const episodes = aired ? Math.min(aired, watchedCount(p, cache.seasons || [])) : 0;
   return { known: aired > 0, started, caughtUp, episodes, share: aired ? episodes / aired : 0 };
@@ -117,7 +120,9 @@ export function tasteProfile(items, { today = new Date() } = {}) {
     const own = normalize(byType[t]);
     const lean = genreAmount[t] / (genreAmount[t] + 3);
     const keys = new Set([...genreWeights.keys(), ...own.keys()]);
-    typeGenreWeights[t] = normalize(new Map([...keys].map((g) => [g, (1 - lean) * (genreWeights.get(g) || 0) + lean * (own.get(g) || 0)])));
+    typeGenreWeights[t] = normalize(
+      new Map([...keys].map((g) => [g, (1 - lean) * (genreWeights.get(g) || 0) + lean * (own.get(g) || 0)])),
+    );
   }
   const genreTotal = genreAmount.movie + genreAmount.tv;
   const languageTotal = [...languages.values()].reduce((a, b) => a + b, 0);
@@ -226,7 +231,9 @@ const BASELINE = 0.1;
 export function scoreCandidate(c, profile, { weights = DEFAULT_WEIGHTS, dprofile = null } = {}) {
   const parts = scoreParts(c, profile);
   if (profile.empty) return 0.6 * parts.quality + 0.4 * Math.min(1, (c.popularity || 0) / 200);
-  const m = Object.fromEntries(Object.keys(DEFAULT_WEIGHTS).map((k) => [k, (weights[k] ?? DEFAULT_WEIGHTS[k]) / DEFAULT_WEIGHTS[k]]));
+  const m = Object.fromEntries(
+    Object.keys(DEFAULT_WEIGHTS).map((k) => [k, (weights[k] ?? DEFAULT_WEIGHTS[k]) / DEFAULT_WEIGHTS[k]]),
+  );
   const rec = recEvidence(c, REC_RATE * m.rec);
   const genreOnly = Math.min(0.9, 0.7 * m.genre) * (parts.genre ?? 0) * profile.genreConfidence;
   const evidence = rec * (0.7 + 0.3 * (parts.genre ?? 0.5)) + (1 - rec) * genreOnly;
@@ -268,7 +275,9 @@ export function learnWeights(feedback = []) {
 // (half the gap, at most 10 points); if you add more than the numbers suggest, they go up.
 // Needs 10 picks, with at least 3 adds and 3 hides. Moving every number by the same amount keeps the order.
 export function calibrationShift(feedback = []) {
-  const scored = feedback.filter((f) => typeof f.score === 'number' && (f.action === 'added' || f.action === 'disliked'));
+  const scored = feedback.filter(
+    (f) => typeof f.score === 'number' && (f.action === 'added' || f.action === 'disliked'),
+  );
   const added = scored.filter((f) => f.action === 'added').length;
   if (scored.length < 10 || added < 3 || scored.length - added < 3) return 0;
   const shown = scored.reduce((sum, f) => sum + f.score, 0) / scored.length;
@@ -294,7 +303,9 @@ export function dislikeProfile(items, dislikes = [], { today = new Date() } = {}
 export function dislikeScore(c, dprofile) {
   if (!dprofile || dprofile.empty) return 0;
   const genres = normalizeGenres(c.genres);
-  const genre = genres.length ? genres.reduce((sum, g) => sum + (dprofile.genreShare.get(g) || 0), 0) / genres.length : 0;
+  const genre = genres.length
+    ? genres.reduce((sum, g) => sum + (dprofile.genreShare.get(g) || 0), 0) / genres.length
+    : 0;
   const similar = Math.min(1, (c.similarToDisliked || 0) / 2);
   return 0.6 * genre + 0.4 * similar;
 }
@@ -303,7 +314,9 @@ export function dislikeScore(c, dprofile) {
 export function reasonFor(c, profile) {
   // The title that says most about your taste; between equals, one you finished reads best.
   const rank = { watched: 0, watching: 1, planned: 2 };
-  const recs = [...(c.recommendedBy || [])].sort((a, b) => b.weight - a.weight || (rank[a.label] ?? 3) - (rank[b.label] ?? 3));
+  const recs = [...(c.recommendedBy || [])].sort(
+    (a, b) => b.weight - a.weight || (rank[a.label] ?? 3) - (rank[b.label] ?? 3),
+  );
   if (recs.length) {
     const verb = { watching: "you're watching", planned: 'you saved' }[recs[0].label] || 'you watched';
     const more = recs.length > 1 ? `, plus ${recs.length - 1} more of your titles` : '';
@@ -381,14 +394,19 @@ function shareSlots(total, a, b, shareOfA, min) {
 export function pickSeeds(items, { liking = new Map(), max = 10 } = {}) {
   const like = (i) => liking.get(i) ?? 0.5;
   const usable = items.filter((i) => !(i.type === 'tv' && i.label === 'watching' && like(i) < 0.25));
-  const shareOf = (part, whole) => part.reduce((s, i) => s + like(i), 0) / (whole.reduce((s, i) => s + like(i), 0) || 1);
+  const shareOf = (part, whole) =>
+    part.reduce((s, i) => s + like(i), 0) / (whole.reduce((s, i) => s + like(i), 0) || 1);
   const shows = usable.filter((i) => i.type === 'tv');
   const movies = usable.filter((i) => i.type === 'movie');
   const [showSlots, movieSlots] = shareSlots(max, shows, movies, shareOf(shows, usable), 4);
   const live = shows.filter((i) => !isAnimatedItem(i));
   const animated = shows.filter(isAnimatedItem);
   const [liveSlots, animSlots] = shareSlots(showSlots, live, animated, shareOf(live, shows), 3);
-  return [...pickMix(live, liveSlots, like), ...pickMix(animated, animSlots, like), ...pickMix(movies, movieSlots, like)];
+  return [
+    ...pickMix(live, liveSlots, like),
+    ...pickMix(animated, animSlots, like),
+    ...pickMix(movies, movieSlots, like),
+  ];
 }
 
 // TMDB's "Animation" genre (same id for movies and TV) covers both anime and Western cartoons.
@@ -409,11 +427,15 @@ export const EXPLORE_TYPES = {
 // in your top genre and your usual language for animation; live action leaves animation out.
 async function discoverQueries(tmdb, type, profile, animated) {
   const top = profile.topGenresByType[type].filter((g) => animated === undefined || g !== 'Animation').slice(0, 3);
-  const ids = top.length ? (await genreIdsFor(tmdb, type, top)).filter((id) => animated === undefined || id !== ANIMATION) : [];
+  const ids = top.length
+    ? (await genreIdsFor(tmdb, type, top)).filter((id) => animated === undefined || id !== ANIMATION)
+    : [];
   if (animated === true) {
     const specific = { with_genres: ids.length ? `${ANIMATION},${ids[0]}` : String(ANIMATION) };
     if (profile.animatedLanguage) specific.with_original_language = profile.animatedLanguage;
-    return specific.with_genres === String(ANIMATION) && !specific.with_original_language ? [specific] : [{ with_genres: String(ANIMATION) }, specific];
+    return specific.with_genres === String(ANIMATION) && !specific.with_original_language
+      ? [specific]
+      : [{ with_genres: String(ANIMATION) }, specific];
   }
   const queries = [ids.length ? { with_genres: ids.join('|') } : {}];
   if (ids.length >= 2) queries.push({ with_genres: `${ids[0]},${ids[1]}` });
@@ -424,12 +446,25 @@ async function discoverQueries(tmdb, type, profile, animated) {
 const recent = new Map();
 export const recentSuggestion = (key) => recent.get(key) || null;
 
-export async function buildExplore({ tmdb, items, region = 'US', services = [], type = 'all', limit = 40, dislikes = [], feedback = [], today = new Date() }) {
+export async function buildExplore({
+  tmdb,
+  items,
+  region = 'US',
+  services = [],
+  type = 'all',
+  limit = 40,
+  dislikes = [],
+  feedback = [],
+  today = new Date(),
+}) {
   const profile = tasteProfile(items, { today });
   const dprofile = dislikeProfile(items, dislikes, { today });
   const weights = learnWeights(feedback);
   const shift = calibrationShift(feedback);
-  const owned = new Set([...items.map((i) => `${i.type}-${i.tmdbId}`), ...dislikes.map((d) => `${d.type}-${d.tmdbId}`)]);
+  const owned = new Set([
+    ...items.map((i) => `${i.type}-${i.tmdbId}`),
+    ...dislikes.map((d) => `${d.type}-${d.tmdbId}`),
+  ]);
   const { types, animated } = EXPLORE_TYPES[type] || EXPLORE_TYPES.all;
   const candidates = new Map();
 
@@ -450,15 +485,20 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   // Only seeds of this tab's types: a show's recommendations are shows, so they'd be thrown away on Movies.
   // Both show tabs use all show seeds, so a title gets the same evidence (and match %) on every tab.
   const seeds = pickSeeds(items, { liking: profile.liking }).filter((s) => types.includes(s.type));
-  const jobs = seeds.map((s) => () =>
-    cached(`rec:${s.type}:${s.tmdbId}`, 24 * HOURS, () => tmdb.recommendations(s.type, s.tmdbId)).then((list) =>
-      add(list, { key: `${s.type}-${s.tmdbId}`, title: s.title, label: s.label, weight: profile.liking.get(s) }),
-    ),
+  const jobs = seeds.map(
+    (s) => () =>
+      cached(`rec:${s.type}:${s.tmdbId}`, 24 * HOURS, () => tmdb.recommendations(s.type, s.tmdbId)).then((list) =>
+        add(list, { key: `${s.type}-${s.tmdbId}`, title: s.title, label: s.label, weight: profile.liking.get(s) }),
+      ),
   );
 
   // Popular titles in your favourite genres, limited to your services if you picked any.
   const providerParams = services.length
-    ? { with_watch_providers: services.join('|'), watch_region: region, with_watch_monetization_types: 'flatrate|free|ads' }
+    ? {
+        with_watch_providers: services.join('|'),
+        watch_region: region,
+        with_watch_monetization_types: 'flatrate|free|ads',
+      }
     : {};
   for (const t of types) {
     jobs.push(async () => {
@@ -491,7 +531,11 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   const scored = [...candidates.values()].map((c) => {
     const genres = (c.genreIds || []).map((id) => maps[c.type]?.get(id)).filter(Boolean);
     const withGenres = { ...c, genres, similarToDisliked: similarToDisliked.get(keyOf(c)) || 0 };
-    return { ...withGenres, score: scoreCandidate(withGenres, profile, { weights, dprofile }), reason: reasonFor(withGenres, profile) };
+    return {
+      ...withGenres,
+      score: scoreCandidate(withGenres, profile, { weights, dprofile }),
+      reason: reasonFor(withGenres, profile),
+    };
   });
   scored.sort((a, b) => b.score - a.score);
 
@@ -499,7 +543,9 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   const shortlist = scored.slice(0, services.length ? limit * 3 : Math.ceil(limit * 1.5));
   await mapLimit(shortlist, 6, async (c) => {
     try {
-      c.providers = await cached(`prov:${c.type}:${c.tmdbId}:${region}`, 24 * HOURS, () => tmdb.watchProviders(c.type, c.tmdbId, region));
+      c.providers = await cached(`prov:${c.type}:${c.tmdbId}:${region}`, 24 * HOURS, () =>
+        tmdb.watchProviders(c.type, c.tmdbId, region),
+      );
     } catch {
       c.providers = { link: null, stream: [], rent: [], buy: [] };
     }
@@ -513,11 +559,22 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
     .map((c) => ({ ...c, match: profile.empty ? null : matchFor(c.score, shift) }));
 
   for (const c of picks) {
-    recent.set(keyOf(c), { type: c.type, tmdbId: c.tmdbId, title: c.title, posterPath: c.posterPath, genres: c.genres, match: c.match, score: c.score, parts: scoreParts(c, profile) });
+    recent.set(keyOf(c), {
+      type: c.type,
+      tmdbId: c.tmdbId,
+      title: c.title,
+      posterPath: c.posterPath,
+      genres: c.genres,
+      match: c.match,
+      score: c.score,
+      parts: scoreParts(c, profile),
+    });
   }
   while (recent.size > 2000) recent.delete(recent.keys().next().value);
 
-  return picks.map(({ genreIds, genres, recommendedBy, popularity, voteCount, originalLanguage, similarToDisliked: _s, ...c }) => c);
+  return picks.map(
+    ({ genreIds, genres, recommendedBy, popularity, voteCount, originalLanguage, similarToDisliked: _s, ...c }) => c,
+  );
 }
 
 // How Explore is doing: of the suggestions you acted on, how many you added.
@@ -526,7 +583,9 @@ export function exploreStats(feedback = []) {
   const disliked = feedback.filter((f) => f.action === 'disliked').length;
   const acted = added + disliked;
   const weights = learnWeights(feedback);
-  const tuned = Object.entries(weights).some(([k, w]) => Math.abs(w - DEFAULT_WEIGHTS[k]) > 0.005) || calibrationShift(feedback) !== 0;
+  const tuned =
+    Object.entries(weights).some(([k, w]) => Math.abs(w - DEFAULT_WEIGHTS[k]) > 0.005) ||
+    calibrationShift(feedback) !== 0;
   return { added, disliked, hitRate: acted ? Math.round((added / acted) * 100) : null, tuned };
 }
 

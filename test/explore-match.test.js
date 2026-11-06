@@ -5,8 +5,18 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  DEFAULT_WEIGHTS, affinity, buildExplore, calibrationShift, clearExploreCache, learnWeights, matchFor,
-  pickSeeds, reasonFor, scoreCandidate, scoreParts, tasteProfile,
+  DEFAULT_WEIGHTS,
+  affinity,
+  buildExplore,
+  calibrationShift,
+  clearExploreCache,
+  learnWeights,
+  matchFor,
+  pickSeeds,
+  reasonFor,
+  scoreCandidate,
+  scoreParts,
+  tasteProfile,
 } from '../server/explore.js';
 import { createApp } from '../server/app.js';
 import { createStore } from '../server/store.js';
@@ -18,19 +28,47 @@ const TODAY = new Date('2026-11-06T12:00:00Z');
 const ago = (days) => new Date(TODAY.getTime() - days * 864e5).toISOString();
 
 // A library show. `progress` is the last episode finished; `idle` is days since you last changed it.
-function show(tmdbId, title, label, { progress = [1, 0], seasons = [10], idle = 5, genres = ['Drama', 'Crime'], lang = 'en', from } = {}) {
+function show(
+  tmdbId,
+  title,
+  label,
+  { progress = [1, 0], seasons = [10], idle = 5, genres = ['Drama', 'Crime'], lang = 'en', from } = {},
+) {
   const cache = {
-    status: 'Returning Series', genres, originalLanguage: lang,
+    status: 'Returning Series',
+    genres,
+    originalLanguage: lang,
     seasons: seasons.map((n, i) => ({ season: i + 1, episodeCount: n, airDate: `${2015 + i}-01-01` })),
     lastEpisode: { season: seasons.length, episode: seasons.at(-1) },
   };
   if (!genres) delete cache.genres;
   if (!lang) delete cache.originalLanguage;
   const [season, episode] = label === 'watched' && !progress[0] ? [seasons.length, seasons.at(-1)] : progress;
-  return { id: `tmdb-tv-${tmdbId}`, tmdbId, type: 'tv', title, label, progress: { season, episode }, cache, addedAt: ago(idle + 1), updatedAt: ago(idle), ...(from ? { addedFrom: from } : {}) };
+  return {
+    id: `tmdb-tv-${tmdbId}`,
+    tmdbId,
+    type: 'tv',
+    title,
+    label,
+    progress: { season, episode },
+    cache,
+    addedAt: ago(idle + 1),
+    updatedAt: ago(idle),
+    ...(from ? { addedFrom: from } : {}),
+  };
 }
 function film(tmdbId, title, label, { genres = ['Crime', 'Drama'], lang = 'en', from } = {}) {
-  return { id: `tmdb-movie-${tmdbId}`, tmdbId, type: 'movie', title, label, cache: { genres, originalLanguage: lang }, addedAt: ago(10), updatedAt: ago(10), ...(from ? { addedFrom: from } : {}) };
+  return {
+    id: `tmdb-movie-${tmdbId}`,
+    tmdbId,
+    type: 'movie',
+    title,
+    label,
+    cache: { genres, originalLanguage: lang },
+    addedAt: ago(10),
+    updatedAt: ago(10),
+    ...(from ? { addedFrom: from } : {}),
+  };
 }
 
 // ---------- How much each title counts ----------
@@ -56,13 +94,24 @@ test('a finished or caught-up show counts most, a dropped one least', () => {
 });
 
 test('people who never set episodes are not treated as dropping everything', () => {
-  const lib = [show(1, 'A', 'watching', { idle: 300 }), show(2, 'B', 'watching', { idle: 300 }), show(3, 'C', 'watched')];
+  const lib = [
+    show(1, 'A', 'watching', { idle: 300 }),
+    show(2, 'B', 'watching', { idle: 300 }),
+    show(3, 'C', 'watched'),
+  ];
   const p = tasteProfile(lib, { today: TODAY });
   assert.equal(p.liking.get(lib[0]), 0.6, 'no progress anywhere, so "not started" says nothing');
 });
 
 test('old library items without episode info or genres still work', () => {
-  const bare = { type: 'tv', tmdbId: 1, title: 'Old', label: 'watching', progress: { season: 2, episode: 3 }, cache: {} };
+  const bare = {
+    type: 'tv',
+    tmdbId: 1,
+    title: 'Old',
+    label: 'watching',
+    progress: { season: 2, episode: 3 },
+    cache: {},
+  };
   assert.equal(affinity(bare, { today: TODAY }), 0.6);
   assert.equal(affinity({ type: 'tv', tmdbId: 2, label: 'watched' }, { today: TODAY }), 1);
   const p = tasteProfile([bare], { today: TODAY });
@@ -73,12 +122,39 @@ test('old library items without episode info or genres still work', () => {
 // ---------- Scenario: a crime-drama fan ----------
 
 const GENRES = {
-  tv: new Map([[18, 'Drama'], [80, 'Crime'], [9648, 'Mystery'], [35, 'Comedy'], [10764, 'Reality'], [16, 'Animation'], [10759, 'Action & Adventure'], [10765, 'Sci-Fi & Fantasy']]),
-  movie: new Map([[18, 'Drama'], [80, 'Crime'], [53, 'Thriller'], [35, 'Comedy'], [28, 'Action'], [878, 'Science Fiction']]),
+  tv: new Map([
+    [18, 'Drama'],
+    [80, 'Crime'],
+    [9648, 'Mystery'],
+    [35, 'Comedy'],
+    [10764, 'Reality'],
+    [16, 'Animation'],
+    [10759, 'Action & Adventure'],
+    [10765, 'Sci-Fi & Fantasy'],
+  ]),
+  movie: new Map([
+    [18, 'Drama'],
+    [80, 'Crime'],
+    [53, 'Thriller'],
+    [35, 'Comedy'],
+    [28, 'Action'],
+    [878, 'Science Fiction'],
+  ]),
 };
 const cand = (tmdbId, type, title, genreIds, voteAverage, extra = {}) => ({
-  tmdbId, type, title, year: 2020, releaseDate: '2020-01-01', posterPath: `/c${tmdbId}.jpg`, overview: '',
-  genreIds, originalLanguage: 'en', voteAverage, voteCount: 3000, popularity: 100, ...extra,
+  tmdbId,
+  type,
+  title,
+  year: 2020,
+  releaseDate: '2020-01-01',
+  posterPath: `/c${tmdbId}.jpg`,
+  overview: '',
+  genreIds,
+  originalLanguage: 'en',
+  voteAverage,
+  voteCount: 3000,
+  popularity: 100,
+  ...extra,
 });
 function fakeTmdb(recs = {}, disc = {}) {
   const calls = [];
@@ -144,7 +220,10 @@ test('a recommendation from a dropped show counts far less than one from a finis
   assert.ok(!tmdb.calls.some((c) => c[0] === 'rec' && c[2] === 5), 'a dropped show does not seed suggestions');
   // Scored directly, with the same weight the library gives each show.
   const p = tasteProfile(crimeFan, { today: TODAY });
-  const by = (item) => matchFor(scoreCandidate({ ...byDropped, genres: ['Drama', 'Crime'], recommendedBy: [{ weight: p.liking.get(item) }] }, p));
+  const by = (item) =>
+    matchFor(
+      scoreCandidate({ ...byDropped, genres: ['Drama', 'Crime'], recommendedBy: [{ weight: p.liking.get(item) }] }, p),
+    );
   assert.ok(by(crimeFan[0]) - by(crimeFan[4]) >= 20, `finished ${by(crimeFan[0])}% vs dropped ${by(crimeFan[4])}%`);
 });
 
@@ -167,14 +246,18 @@ test('poor ratings and unfamiliar languages trim a match; unreleased titles are 
 
 test('the match % only goes down the list, with dislikes and learned weights too', async () => {
   const feedback = [
-    ...[0.9, 0.8, 0.95].map((rec) => ({ action: 'added', parts: { genre: 0.8, rec, quality: 0.7, type: 1, language: 1 } })),
+    ...[0.9, 0.8, 0.95].map((rec) => ({
+      action: 'added',
+      parts: { genre: 0.8, rec, quality: 0.7, type: 1, language: 1 },
+    })),
     ...[0.1, 0].map((rec) => ({ action: 'disliked', parts: { genre: 0.7, rec, quality: 0.7, type: 1, language: 1 } })),
   ];
   const dislikes = [{ type: 'tv', tmdbId: 999, title: 'Hidden', genres: ['Comedy'] }];
   for (const type of ['all', 'movie', 'tv-live', 'tv-animated']) {
     const list = await run(crimeTmdb(), { type, feedback, dislikes });
     assert.ok(list.length > 0, type);
-    for (let i = 1; i < list.length; i++) assert.ok(list[i - 1].match >= list[i].match, `${type}: ${list[i - 1].title} before ${list[i].title}`);
+    for (let i = 1; i < list.length; i++)
+      assert.ok(list[i - 1].match >= list[i].match, `${type}: ${list[i - 1].title} before ${list[i].title}`);
   }
 });
 
@@ -201,7 +284,11 @@ test('an old library file without genres or languages still gets sensible matche
   const items = crimeFan.map((i) => ({ ...i, cache: { ...i.cache, genres: undefined, originalLanguage: undefined } }));
   const list = await buildExplore({ tmdb: crimeTmdb(), items, today: TODAY });
   assert.ok(pct(list, 'Recommended by a finished show') >= 60);
-  assert.equal(pct(list, 'Korean crime show'), pct(list, 'Recommended by a finished show'), 'language unknown, so no trim');
+  assert.equal(
+    pct(list, 'Korean crime show'),
+    pct(list, 'Recommended by a finished show'),
+    'language unknown, so no trim',
+  );
 });
 
 // ---------- Seeds and searches ----------
@@ -213,7 +300,9 @@ test('seeds: a movie-only library uses all 10 on movies', () => {
 
 test('seeds: shows and movies each get their own, both kinds of show get a turn, dropped shows are skipped', () => {
   const live = Array.from({ length: 10 }, (_, i) => show(10 + i, `Live ${i}`, 'watched'));
-  const anime = Array.from({ length: 3 }, (_, i) => show(30 + i, `Anime ${i}`, 'watched', { genres: ['Animation', 'Action & Adventure'], lang: 'ja', idle: 400 }));
+  const anime = Array.from({ length: 3 }, (_, i) =>
+    show(30 + i, `Anime ${i}`, 'watched', { genres: ['Animation', 'Action & Adventure'], lang: 'ja', idle: 400 }),
+  );
   const dropped = show(40, 'Dropped', 'watching', { progress: [1, 1], seasons: [10, 10], idle: 300 });
   const movies = Array.from({ length: 8 }, (_, i) => film(50 + i, `Movie ${i}`, 'watched'));
   const items = [...live, ...anime, dropped, ...movies, film(60, 'Saved', 'planned')];
@@ -223,29 +312,52 @@ test('seeds: shows and movies each get their own, both kinds of show get a turn,
   assert.ok(shows.length >= 4 && seeds.length - shows.length >= 4, 'shows and movies each get at least 4');
   assert.equal(shows.filter((s) => s.title.startsWith('Anime')).length, 3, 'the older anime still seed the anime tab');
   assert.ok(!seeds.includes(dropped));
-  assert.ok(seeds.some((s) => s.title === 'Saved'), 'a planned movie gets a turn');
+  assert.ok(
+    seeds.some((s) => s.title === 'Saved'),
+    'a planned movie gets a turn',
+  );
 });
 
 test('the Movies tab only asks for movie recommendations; Anime & cartoons searches in your anime language', async () => {
   const tmdb = crimeTmdb();
   await run(tmdb, { type: 'movie' });
-  assert.deepEqual(tmdb.calls.filter((c) => c[0] === 'rec').map((c) => c[1]), ['movie']);
+  assert.deepEqual(
+    tmdb.calls.filter((c) => c[0] === 'rec').map((c) => c[1]),
+    ['movie'],
+  );
 
   const animeFan = [
-    show(1, 'Frieren', 'watching', { progress: [1, 28], seasons: [28], genres: ['Animation', 'Action & Adventure'], lang: 'ja' }),
+    show(1, 'Frieren', 'watching', {
+      progress: [1, 28],
+      seasons: [28],
+      genres: ['Animation', 'Action & Adventure'],
+      lang: 'ja',
+    }),
     show(2, 'Attack on Titan', 'watched', { seasons: [25, 12], genres: ['Animation', 'Sci-Fi & Fantasy'], lang: 'ja' }),
   ];
   const t2 = crimeTmdb();
   await buildExplore({ tmdb: t2, items: animeFan, type: 'tv-animated', today: TODAY });
   const searches = t2.calls.filter((c) => c[0] === 'discover').map((c) => c[2]);
-  assert.ok(searches.some((p) => p.with_genres === '16'), 'popular animation');
-  assert.ok(searches.some((p) => p.with_genres === '16,10759' && p.with_original_language === 'ja'), 'animated, in your top genre and language');
+  assert.ok(
+    searches.some((p) => p.with_genres === '16'),
+    'popular animation',
+  );
+  assert.ok(
+    searches.some((p) => p.with_genres === '16,10759' && p.with_original_language === 'ja'),
+    'animated, in your top genre and language',
+  );
 
   const t3 = crimeTmdb();
   await run(t3, { type: 'tv-live' });
   const live = t3.calls.filter((c) => c[0] === 'discover').map((c) => c[2]);
-  assert.ok(live.some((p) => p.with_genres === '18|80|9648'), 'any of your top genres');
-  assert.ok(live.some((p) => p.with_genres === '18,80'), 'both of your top two');
+  assert.ok(
+    live.some((p) => p.with_genres === '18|80|9648'),
+    'any of your top genres',
+  );
+  assert.ok(
+    live.some((p) => p.with_genres === '18,80'),
+    'both of your top two',
+  );
   assert.ok(live.every((p) => p.without_genres === '16'));
 });
 
@@ -257,8 +369,15 @@ test('the match numbers move toward how often you actually add suggestions', () 
     ...Array.from({ length: hides }, () => ({ action: 'disliked', score })),
   ];
   assert.equal(calibrationShift(picks(3, 3, 0.8)), 0, 'needs 10 picks');
-  assert.equal(calibrationShift([...picks(3, 6, 0.8), { action: 'added', match: 80 }]), 0, 'old feedback without a score is ignored');
-  assert.ok(Math.abs(calibrationShift(picks(4, 6, 0.8)) - -0.1) < 1e-9, '80% shown but 40% added: down, at most 10 points');
+  assert.equal(
+    calibrationShift([...picks(3, 6, 0.8), { action: 'added', match: 80 }]),
+    0,
+    'old feedback without a score is ignored',
+  );
+  assert.ok(
+    Math.abs(calibrationShift(picks(4, 6, 0.8)) - -0.1) < 1e-9,
+    '80% shown but 40% added: down, at most 10 points',
+  );
   assert.ok(Math.abs(calibrationShift(picks(6, 4, 0.5)) - 0.05) < 1e-9, '50% shown but 60% added: up by half the gap');
   assert.equal(calibrationShift(picks(7, 3, 0.7)), 0, 'already right');
   assert.equal(matchFor(0.995), 99, 'never 100%');
@@ -268,14 +387,21 @@ test('the match numbers move toward how often you actually add suggestions', () 
 
 test('learning ignores signals that old feedback did not record', () => {
   const same = { genre: 0.5, rec: 0.5, quality: 0.5, type: 0.5 }; // no language
-  const fb = [...Array.from({ length: 3 }, () => ({ action: 'added', parts: same })), ...Array.from({ length: 2 }, () => ({ action: 'disliked', parts: same }))];
+  const fb = [
+    ...Array.from({ length: 3 }, () => ({ action: 'added', parts: same })),
+    ...Array.from({ length: 2 }, () => ({ action: 'disliked', parts: same })),
+  ];
   const w = learnWeights(fb);
   for (const [k, v] of Object.entries(DEFAULT_WEIGHTS)) assert.ok(Math.abs(w[k] - v) < 1e-9, k);
 });
 
 test('reasons mention how many of your titles point to a suggestion, leading with one you finished', () => {
   const p = tasteProfile([], { today: TODAY });
-  const recs = [{ title: 'Ozark', label: 'watching', weight: 1 }, { title: 'Breaking Bad', label: 'watched', weight: 1 }, { title: 'Narcos', label: 'planned', weight: 0.3 }];
+  const recs = [
+    { title: 'Ozark', label: 'watching', weight: 1 },
+    { title: 'Breaking Bad', label: 'watched', weight: 1 },
+    { title: 'Narcos', label: 'planned', weight: 0.3 },
+  ];
   assert.equal(reasonFor({ recommendedBy: recs }, p), 'Because you watched Breaking Bad, plus 2 more of your titles');
 });
 
@@ -283,14 +409,27 @@ test('feedback saves the score behind the match, for the feedback check', async 
   const file = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-score-')), 'library.json');
   const store = createStore(file);
   await store.init();
-  await store.update((d) => d.items.push({ id: 'tmdb-tv-1396', tmdbId: 1396, type: 'tv', title: 'Breaking Bad', label: 'watched', cache: { genres: ['Drama', 'Crime'] } }));
+  await store.update((d) =>
+    d.items.push({
+      id: 'tmdb-tv-1396',
+      tmdbId: 1396,
+      type: 'tv',
+      title: 'Breaking Bad',
+      label: 'watched',
+      cache: { genres: ['Drama', 'Crime'] },
+    }),
+  );
   const s = createApp({ store, tmdb: sharedFake }).listen(0);
   await new Promise((r) => s.once('listening', r));
   const base = `http://localhost:${s.address().port}`;
   try {
     const { items } = await (await fetch(`${base}/api/explore`)).json();
     const target = items[0];
-    await fetch(`${base}/api/explore/dislikes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: target.type, tmdbId: target.tmdbId }) });
+    await fetch(`${base}/api/explore/dislikes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: target.type, tmdbId: target.tmdbId }),
+    });
     const fb = JSON.parse(await fs.readFile(file, 'utf8')).feedback.at(-1);
     assert.equal(typeof fb.score, 'number');
     assert.equal(fb.match, matchFor(fb.score));

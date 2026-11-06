@@ -1,109 +1,135 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Show &amp; Movie Tracker</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <header class="topbar">
-    <h1 class="brand">Show &amp; Movie Tracker</h1>
-    <nav class="views" aria-label="Pages">
-      <button class="view-tab active" data-view="library">Library</button>
-      <button class="view-tab" data-view="explore">Explore</button>
-    </nav>
-    <div class="search">
-      <input id="search-input" type="search" placeholder="Add a movie or show…" autocomplete="off" aria-label="Search TMDB to add a movie or show">
-      <ul id="search-results" class="search-results" hidden></ul>
-    </div>
-  </header>
-
-  <main id="library-view">
-    <div class="library-bar">
-      <nav class="filters" aria-label="Filter library">
-        <button class="chip active" data-filter="all">All</button>
-        <button class="chip" data-filter="watching">Watching</button>
-        <button class="chip" data-filter="waiting" title="Caught up and waiting for new episodes">Waiting</button>
-        <button class="chip" data-filter="planned">Planned</button>
-        <button class="chip" data-filter="watched">Watched</button>
-        <button class="chip gap" data-filter="movie">Movies</button>
-        <button class="chip" data-filter="tv">Shows</button>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Show &amp; Movie Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="brand">Show &amp; Movie Tracker</h1>
+      <nav class="views" aria-label="Pages">
+        <button class="view-tab active" data-view="library">Library</button>
+        <button class="view-tab" data-view="explore">Explore</button>
       </nav>
-      <div class="list-controls">
-        <select id="genre-select" class="genre-select" aria-label="Genre" hidden>
-          <option value="">All genres</option>
-        </select>
-        <select id="sort-select" class="sort-select" aria-label="Sort">
-          <option value="title">Sort: A–Z</option>
-          <option value="progress">Sort: Progress</option>
-          <option value="release">Sort: Release date</option>
-        </select>
-        <input id="library-search" class="library-search" type="search" placeholder="Search library" autocomplete="off" aria-label="Search your library">
+      <div class="search">
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Add a movie or show…"
+          autocomplete="off"
+          aria-label="Search TMDB to add a movie or show"
+        />
+        <ul id="search-results" class="search-results" hidden></ul>
       </div>
-      <span id="sync-status" class="sync-status"></span>
-    </div>
+    </header>
 
-    <p id="message" class="message" hidden></p>
-    <section id="grid" class="grid" aria-live="polite"></section>
-    <p id="empty" class="empty" hidden>Nothing here yet. Search for a movie or show above to add it.</p>
-  </main>
-
-  <main id="explore-view" hidden>
-    <div class="library-bar">
-      <nav class="filters explore-types" aria-label="Suggestion type">
-        <button class="chip active" data-type="all">All</button>
-        <button class="chip" data-type="movie">Movies</button>
-        <button class="chip" data-type="tv-live">Live-action shows</button>
-        <button class="chip" data-type="tv-animated">Anime &amp; cartoons</button>
-      </nav>
-      <div class="list-controls">
-        <button id="services-btn" class="services-btn">Streaming: All services</button>
+    <main id="library-view">
+      <div class="library-bar">
+        <nav class="filters" aria-label="Filter library">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="watching">Watching</button>
+          <button class="chip" data-filter="waiting" title="Caught up and waiting for new episodes">Waiting</button>
+          <button class="chip" data-filter="planned">Planned</button>
+          <button class="chip" data-filter="watched">Watched</button>
+          <button class="chip gap" data-filter="movie">Movies</button>
+          <button class="chip" data-filter="tv">Shows</button>
+        </nav>
+        <div class="list-controls">
+          <select id="genre-select" class="genre-select" aria-label="Genre" hidden>
+            <option value="">All genres</option>
+          </select>
+          <select id="sort-select" class="sort-select" aria-label="Sort">
+            <option value="title">Sort: A–Z</option>
+            <option value="progress">Sort: Progress</option>
+            <option value="release">Sort: Release date</option>
+          </select>
+          <input
+            id="library-search"
+            class="library-search"
+            type="search"
+            placeholder="Search library"
+            autocomplete="off"
+            aria-label="Search your library"
+          />
+        </div>
+        <span id="sync-status" class="sync-status"></span>
       </div>
-    </div>
 
-    <section id="services-panel" class="services-panel" hidden>
-      <div class="services-head">
-        <strong>Your streaming services</strong>
-        <label class="region">Country <select id="region-select"></select></label>
+      <p id="message" class="message" hidden></p>
+      <section id="grid" class="grid" aria-live="polite"></section>
+      <p id="empty" class="empty" hidden>Nothing here yet. Search for a movie or show above to add it.</p>
+    </main>
+
+    <main id="explore-view" hidden>
+      <div class="library-bar">
+        <nav class="filters explore-types" aria-label="Suggestion type">
+          <button class="chip active" data-type="all">All</button>
+          <button class="chip" data-type="movie">Movies</button>
+          <button class="chip" data-type="tv-live">Live-action shows</button>
+          <button class="chip" data-type="tv-animated">Anime &amp; cartoons</button>
+        </nav>
+        <div class="list-controls">
+          <button id="services-btn" class="services-btn">Streaming: All services</button>
+        </div>
       </div>
-      <p class="muted small">Pick the services you have, and Explore will only suggest titles you can stream on them. Pick none to see everything. <button type="button" id="services-clear" class="link-btn">Clear</button></p>
-      <div id="services-list" class="services-list"></div>
-    </section>
 
-    <p id="explore-message" class="message" hidden></p>
-    <p id="explore-stats" class="explore-stats" hidden></p>
-    <p id="explore-loading" class="empty" hidden>Finding things you'll like…</p>
-    <section id="explore-grid" class="grid" aria-live="polite"></section>
-    <p id="explore-empty" class="empty" hidden></p>
-    <p class="attribution">Suggestions and streaming info from TMDB. Streaming data provided by JustWatch.</p>
-  </main>
+      <section id="services-panel" class="services-panel" hidden>
+        <div class="services-head">
+          <strong>Your streaming services</strong>
+          <label class="region"
+            >Country
+            <select id="region-select"></select
+          ></label>
+        </div>
+        <p class="muted small">
+          Pick the services you have, and Explore will only suggest titles you can stream on them. Pick none to see
+          everything. <button type="button" id="services-clear" class="link-btn">Clear</button>
+        </p>
+        <div id="services-list" class="services-list"></div>
+      </section>
 
-  <div id="toast" class="toast" role="status" hidden></div>
+      <p id="explore-message" class="message" hidden></p>
+      <p id="explore-stats" class="explore-stats" hidden></p>
+      <p id="explore-loading" class="empty" hidden>Finding things you'll like…</p>
+      <section id="explore-grid" class="grid" aria-live="polite"></section>
+      <p id="explore-empty" class="empty" hidden></p>
+      <p class="attribution">Suggestions and streaming info from TMDB. Streaming data provided by JustWatch.</p>
+    </main>
 
-  <dialog id="detail" class="detail">
-    <form method="dialog" class="detail-close"><button aria-label="Close">✕</button></form>
-    <div id="detail-body"></div>
-  </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
 
-  <script>
-    // Open the page and tab from the address before anything is drawn, so a refresh
-    // doesn't flash the Library first. (The full app takes over a moment later.)
-    (function () {
-      var parts = location.hash.slice(1).split('/');
-      var view = parts[0] === 'explore' ? 'explore' : 'library';
-      var sub = parts[1] || 'all';
-      document.getElementById('library-view').hidden = view !== 'library';
-      document.getElementById('explore-view').hidden = view !== 'explore';
-      document.querySelectorAll('.view-tab').forEach(function (t) {
-        t.classList.toggle('active', t.getAttribute('data-view') === view);
-      });
-      var chips = document.querySelectorAll(view === 'explore' ? '.explore-types .chip' : '#library-view .filters .chip');
-      var key = view === 'explore' ? 'data-type' : 'data-filter';
-      var match = Array.prototype.some.call(chips, function (c) { return c.getAttribute(key) === sub; });
-      if (match) chips.forEach(function (c) { c.classList.toggle('active', c.getAttribute(key) === sub); });
-    })();
-  </script>
-  <script type="module" src="app.js"></script>
-</body>
+    <dialog id="detail" class="detail">
+      <form method="dialog" class="detail-close"><button aria-label="Close">✕</button></form>
+      <div id="detail-body"></div>
+    </dialog>
+
+    <script>
+      // Open the page and tab from the address before anything is drawn, so a refresh
+      // doesn't flash the Library first. (The full app takes over a moment later.)
+      (function () {
+        var parts = location.hash.slice(1).split('/');
+        var view = parts[0] === 'explore' ? 'explore' : 'library';
+        var sub = parts[1] || 'all';
+        document.getElementById('library-view').hidden = view !== 'library';
+        document.getElementById('explore-view').hidden = view !== 'explore';
+        document.querySelectorAll('.view-tab').forEach(function (t) {
+          t.classList.toggle('active', t.getAttribute('data-view') === view);
+        });
+        var chips = document.querySelectorAll(
+          view === 'explore' ? '.explore-types .chip' : '#library-view .filters .chip',
+        );
+        var key = view === 'explore' ? 'data-type' : 'data-filter';
+        var match = Array.prototype.some.call(chips, function (c) {
+          return c.getAttribute(key) === sub;
+        });
+        if (match)
+          chips.forEach(function (c) {
+            c.classList.toggle('active', c.getAttribute(key) === sub);
+          });
+      })();
+    </script>
+    <script type="module" src="app.js"></script>
+  </body>
 </html>

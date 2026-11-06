@@ -21,7 +21,9 @@ export function airedSeasons(cache = {}, today = new Date()) {
   if (!latest) return [];
   return (cache.seasons || [])
     .filter((s) => s.season <= latest.season)
-    .map((s) => (s.season === latest.season ? { ...s, totalEpisodes: s.episodeCount, episodeCount: latest.episode } : s));
+    .map((s) =>
+      s.season === latest.season ? { ...s, totalEpisodes: s.episodeCount, episodeCount: latest.episode } : s,
+    );
 }
 
 export function isCaughtUp(progress, cache) {
@@ -65,7 +67,12 @@ export function formatProgress(progress) {
 // What a title shows as in the library. A "Watching" show you're caught up on, with more
 // episodes or seasons still to come, shows as "Waiting" until something new comes out.
 export function statusOf(item) {
-  if (item.type === 'tv' && item.label === 'watching' && item.prediction?.kind !== 'ended' && isCaughtUp(item.progress, item.cache)) {
+  if (
+    item.type === 'tv' &&
+    item.label === 'watching' &&
+    item.prediction?.kind !== 'ended' &&
+    isCaughtUp(item.progress, item.cache)
+  ) {
     return 'waiting';
   }
   return item.label;

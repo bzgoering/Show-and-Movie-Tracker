@@ -7,7 +7,8 @@ export function readRoute() {
   return { view: view === 'explore' ? 'explore' : 'library', sub: sub || 'all' };
 }
 
-const hashFor = (view, sub) => (sub && sub !== 'all' ? `#${view}/${sub}` : view === 'library' ? '#library' : `#${view}`);
+const hashFor = (view, sub) =>
+  sub && sub !== 'all' ? `#${view}/${sub}` : view === 'library' ? '#library' : `#${view}`;
 
 // Last sub-tab seen on each page, so coming back to a page reopens its tab, even after a
 // refresh. Kept for this browser tab only; if storage is blocked it just isn't remembered.

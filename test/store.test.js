@@ -66,7 +66,9 @@ test('retries when another program has the file locked (OneDrive, antivirus)', a
 
 test('falls back to writing directly if the file stays locked', async () => {
   const file = await tempFile();
-  const alwaysLocked = async () => { throw Object.assign(new Error('busy'), { code: 'EBUSY' }); };
+  const alwaysLocked = async () => {
+    throw Object.assign(new Error('busy'), { code: 'EBUSY' });
+  };
   const store = createStore(file, { rename: alwaysLocked });
   const warn = console.warn;
   console.warn = () => {};

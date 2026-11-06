@@ -2,7 +2,14 @@ import { $, api, esc, poster, providerStrip, whereToWatch } from './common.js';
 import { readRoute, setSubTab } from './route.js';
 import './explore-page.js';
 import { hasGenre, libraryGenres, sortItems } from './sort.js';
-import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
+import {
+  airedSeasons,
+  currentEpisode,
+  latestAired,
+  progressForCurrent,
+  progressSummary,
+  statusOf,
+} from './progress.js';
 
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
 const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 'watched'] };
@@ -98,7 +105,12 @@ function shortWhen(iso) {
 function longWhen(iso) {
   const d = new Date(`${iso}T00:00:00`);
   const sameYear = d.getFullYear() === new Date().getFullYear();
-  const date = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
+  const date = d.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
   const days = daysUntil(iso);
   const rel = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days > 1 ? `in ${days} days` : '';
   return rel ? `${date} · ${rel}` : date;
@@ -108,10 +120,18 @@ function longWhen(iso) {
 function cardRelease(p) {
   if (!p) return null;
   if (p.kind === 'confirmed') {
-    const tag = p.scope === 'episode' ? 'Next episode' : p.scope === 'part' ? 'Next part' : p.pattern === 'all-at-once' ? 'Full season' : 'New season';
+    const tag =
+      p.scope === 'episode'
+        ? 'Next episode'
+        : p.scope === 'part'
+          ? 'Next part'
+          : p.pattern === 'all-at-once'
+            ? 'Full season'
+            : 'New season';
     return { tag, text: shortWhen(p.date), soon: daysUntil(p.date) < 7 };
   }
-  if (p.kind === 'estimated') return { tag: 'New season', text: p.overdue ? 'overdue' : `~${fmtDate(p.date, { monthOnly: true })}` };
+  if (p.kind === 'estimated')
+    return { tag: 'New season', text: p.overdue ? 'overdue' : `~${fmtDate(p.date, { monthOnly: true })}` };
   if (p.kind === 'ended') return { tag: '', text: 'Ended' };
   return null;
 }
@@ -130,7 +150,8 @@ function renderGrid() {
   grid.innerHTML = items
     .map((item) => {
       // Release info only matters once you're caught up (Waiting) or done (Watched).
-      let release = item.type === 'tv' && ['waiting', 'watched'].includes(statusOf(item)) ? cardRelease(item.prediction) : null;
+      let release =
+        item.type === 'tv' && ['waiting', 'watched'].includes(statusOf(item)) ? cardRelease(item.prediction) : null;
       if (release && item.prediction.kind === 'ended' && progressSummary(item) === 'Finished') release = null; // card already says "Finished"
       return `
       <button class="card" data-id="${esc(item.id)}" title="${esc(item.title)}">
@@ -146,14 +167,18 @@ function renderGrid() {
         }
         ${
           // Planned titles show where you can watch them, like Explore does.
-          statusOf(item) === 'planned' && item.cache?.providers ? `<div class="card-providers">${providerStrip(item.cache.providers)}</div>` : ''
+          statusOf(item) === 'planned' && item.cache?.providers
+            ? `<div class="card-providers">${providerStrip(item.cache.providers)}</div>`
+            : ''
         }
       </button>`;
     })
     .join('');
   $('#empty').hidden = items.length > 0;
-  if (state.items.length > 0 && items.length === 0 && state.genre && !state.query) $('#empty').textContent = `Nothing in ${state.genre}.`;
-  else if (state.items.length > 0 && items.length === 0 && state.query) $('#empty').textContent = `Nothing in your library matches "${state.query}".`;
+  if (state.items.length > 0 && items.length === 0 && state.genre && !state.query)
+    $('#empty').textContent = `Nothing in ${state.genre}.`;
+  else if (state.items.length > 0 && items.length === 0 && state.query)
+    $('#empty').textContent = `Nothing in your library matches "${state.query}".`;
   else if (state.items.length > 0 && items.length === 0) $('#empty').textContent = 'Nothing matches this filter.';
   else $('#empty').textContent = 'Nothing here yet. Search for a movie or show above to add it.';
 }
@@ -300,7 +325,10 @@ searchResults.addEventListener('click', async (e) => {
   btn.disabled = true;
   btn.textContent = 'Adding…';
   try {
-    const item = await api('/api/library', { method: 'POST', body: { type: btn.dataset.type, tmdbId: Number(btn.dataset.id) } });
+    const item = await api('/api/library', {
+      method: 'POST',
+      body: { type: btn.dataset.type, tmdbId: Number(btn.dataset.id) },
+    });
     upsert(item);
     renderGrid();
     btn.replaceWith(Object.assign(document.createElement('span'), { className: 'in-library', textContent: 'Added' }));
@@ -376,9 +404,14 @@ function nextBox(p) {
       ? `Expected around ${fmtDate(p.date, { monthOnly: true })}, but not announced yet`
       : `Around ${fmtDate(p.date, { monthOnly: true })} (estimate)`;
     if (p.basis) notes.push(`${p.basis}.`);
-    if (PATTERN_NOTES[p.pattern]) notes.push(`Last season: ${PATTERN_NOTES[p.pattern].charAt(0).toLowerCase()}${PATTERN_NOTES[p.pattern].slice(1)}`);
+    if (PATTERN_NOTES[p.pattern])
+      notes.push(
+        `Last season: ${PATTERN_NOTES[p.pattern].charAt(0).toLowerCase()}${PATTERN_NOTES[p.pattern].slice(1)}`,
+      );
   } else if (p.kind === 'ended') {
-    main = p.label?.includes('you') ? 'You marked this series as finished' : `This series has ${p.label?.includes('canceled') ? 'been canceled' : 'ended'}`;
+    main = p.label?.includes('you')
+      ? 'You marked this series as finished'
+      : `This series has ${p.label?.includes('canceled') ? 'been canceled' : 'ended'}`;
   } else {
     main = 'No new episodes announced';
   }
@@ -406,7 +439,9 @@ function tvSection(item) {
   const showDone = ended && latest && (atLatest || (!current && item.label !== 'watched'));
 
   const seasonLabel = (s) =>
-    s.totalEpisodes && s.totalEpisodes > s.episodeCount ? `${s.name} (${s.episodeCount} of ${s.totalEpisodes} out)` : `${s.name} (${s.episodeCount})`;
+    s.totalEpisodes && s.totalEpisodes > s.episodeCount
+      ? `${s.name} (${s.episodeCount} of ${s.totalEpisodes} out)`
+      : `${s.name} (${s.episodeCount})`;
 
   const pickers = seasons.length
     ? `
@@ -461,7 +496,11 @@ function renderDetail() {
   const c = item.cache || {};
   const facts =
     item.type === 'movie'
-      ? [c.releaseDate && `Released ${c.releaseDate}`, c.runtime && `${c.runtime} min`, c.status !== 'Released' && c.status].filter(Boolean)
+      ? [
+          c.releaseDate && `Released ${c.releaseDate}`,
+          c.runtime && `${c.runtime} min`,
+          c.status !== 'Released' && c.status,
+        ].filter(Boolean)
       : [item.year && `First aired ${item.year}`];
 
   detailBody.innerHTML = `
@@ -472,7 +511,10 @@ function renderDetail() {
         <p class="muted">${item.type === 'tv' ? 'TV show' : 'Movie'}${facts.length ? ' · ' + esc(facts.join(' · ')) : ''}</p>
         <div class="label-picker" role="group" aria-label="Label">
           ${LABELS_FOR[item.type]
-            .map((l) => `<button class="label-btn ${l}${item.label === l ? ' active' : ''}" data-label="${l}">${LABEL_NAMES[l]}</button>`)
+            .map(
+              (l) =>
+                `<button class="label-btn ${l}${item.label === l ? ' active' : ''}" data-label="${l}">${LABEL_NAMES[l]}</button>`,
+            )
             .join('')}
         </div>
         ${item.overview ? `<p class="overview">${esc(item.overview)}</p>` : ''}

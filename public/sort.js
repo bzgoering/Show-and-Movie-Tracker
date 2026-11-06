@@ -3,7 +3,8 @@ import { statusOf } from './progress.js';
 
 const PROGRESS_ORDER = { watching: 0, waiting: 1, planned: 2, watched: 3 };
 
-const byTitle = (a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base', numeric: true });
+const byTitle = (a, b) =>
+  (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base', numeric: true });
 
 // Movies: release date. Shows: first air date (or January 1st of the first year as a fallback).
 export function releaseDate(item) {
@@ -25,7 +26,10 @@ function by(value, compare) {
 
 export const SORTS = {
   title: byTitle,
-  progress: by((i) => PROGRESS_ORDER[statusOf(i)], (a, b) => a - b),
+  progress: by(
+    (i) => PROGRESS_ORDER[statusOf(i)],
+    (a, b) => a - b,
+  ),
   release: by(releaseDate, (a, b) => b.localeCompare(a)), // newest first
 };
 
@@ -39,9 +43,7 @@ export function libraryGenres(items) {
   for (const item of items) {
     for (const g of new Set(item.cache?.genres || [])) counts.set(g, (counts.get(g) || 0) + 1);
   }
-  return [...counts]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export const hasGenre = (item, genre) => !genre || (item.cache?.genres || []).includes(genre);

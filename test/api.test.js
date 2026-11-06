@@ -72,7 +72,10 @@ test('updates label, progress and ended flag, and saves them to disk', async () 
 
 test('rejects bad input', async () => {
   assert.equal((await call('PATCH', '/api/library/tmdb-movie-27205', { label: 'watching' })).status, 400);
-  assert.equal((await call('PATCH', '/api/library/tmdb-tv-100088', { progress: { season: 0, episode: 1 } })).status, 400);
+  assert.equal(
+    (await call('PATCH', '/api/library/tmdb-tv-100088', { progress: { season: 0, episode: 1 } })).status,
+    400,
+  );
   assert.equal((await call('POST', '/api/library', { type: 'book', tmdbId: 1 })).status, 400);
   assert.equal((await call('PATCH', '/api/library/nope', { label: 'watched' })).status, 404);
 });
@@ -88,17 +91,48 @@ test('progress past the newest aired episode is rejected', async () => {
   const bad = await call('PATCH', '/api/library/tmdb-tv-1396', { progress: { season: 6, episode: 1 } });
   assert.equal(bad.status, 400);
   assert.match(bad.body.error, /hasn't aired/);
-  assert.equal((await call('PATCH', '/api/library/tmdb-tv-1396', { progress: { season: 5, episode: 16 } })).status, 200);
+  assert.equal(
+    (await call('PATCH', '/api/library/tmdb-tv-1396', { progress: { season: 5, episode: 16 } })).status,
+    200,
+  );
 });
 
 test('syncOnStart refreshes every saved title before the first page load', async () => {
   const f = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-sync-')), 'library.json');
   const old = '2020-01-01T00:00:00.000Z';
-  await fs.writeFile(f, JSON.stringify({ items: [
-    { id: 'tmdb-tv-1396', tmdbId: 1396, type: 'tv', title: 'Old title', label: 'watching', progress: { season: 2, episode: 3 }, cache: { status: 'Returning Series', lastFetched: old } },
-    { id: 'tmdb-movie-27205', tmdbId: 27205, type: 'movie', title: 'Inception', label: 'planned', cache: { lastFetched: new Date().toISOString() } },
-    { id: 'tmdb-tv-999', tmdbId: 999, type: 'tv', title: 'Removed from TMDB', label: 'planned', progress: { season: 1, episode: 0 }, cache: { lastFetched: old } },
-  ] }));
+  await fs.writeFile(
+    f,
+    JSON.stringify({
+      items: [
+        {
+          id: 'tmdb-tv-1396',
+          tmdbId: 1396,
+          type: 'tv',
+          title: 'Old title',
+          label: 'watching',
+          progress: { season: 2, episode: 3 },
+          cache: { status: 'Returning Series', lastFetched: old },
+        },
+        {
+          id: 'tmdb-movie-27205',
+          tmdbId: 27205,
+          type: 'movie',
+          title: 'Inception',
+          label: 'planned',
+          cache: { lastFetched: new Date().toISOString() },
+        },
+        {
+          id: 'tmdb-tv-999',
+          tmdbId: 999,
+          type: 'tv',
+          title: 'Removed from TMDB',
+          label: 'planned',
+          progress: { season: 1, episode: 0 },
+          cache: { lastFetched: old },
+        },
+      ],
+    }),
+  );
   process.env.TMDB_API_KEY = 'test';
   const log = console.log;
   console.log = () => {};
@@ -113,7 +147,11 @@ test('syncOnStart refreshes every saved title before the first page load', async
     assert.equal(bb.cache.status, 'Ended');
     assert.deepEqual(bb.progress, { season: 2, episode: 3 }, 'user progress is kept');
     assert.equal(bb.label, 'watching');
-    assert.equal(res.items.find((i) => i.id === 'tmdb-tv-999').title, 'Removed from TMDB', 'failed refresh keeps saved info');
+    assert.equal(
+      res.items.find((i) => i.id === 'tmdb-tv-999').title,
+      'Removed from TMDB',
+      'failed refresh keeps saved info',
+    );
     assert.equal(res.sync.updated, 2, 'fresh items are refreshed on start too');
     assert.equal(res.sync.failed, 1);
   } finally {
@@ -125,18 +163,40 @@ test('syncOnStart refreshes every saved title before the first page load', async
 test('a finished show that comes back moves out of Watched on refresh', async () => {
   const f = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-revive-')), 'library.json');
   const seasons = [{ season: 1, name: 'Season 1', episodeCount: 8, airDate: '2020-01-01' }];
-  await fs.writeFile(f, JSON.stringify({ items: [{
-    id: 'tmdb-tv-42', tmdbId: 42, type: 'tv', title: 'Old Name', label: 'watched', userMarkedEnded: true,
-    progress: { season: 1, episode: 8 },
-    cache: { status: 'Ended', seasons, lastEpisode: { season: 1, episode: 8 }, lastFetched: '2020-01-01T00:00:00.000Z' },
-  }] }));
+  await fs.writeFile(
+    f,
+    JSON.stringify({
+      items: [
+        {
+          id: 'tmdb-tv-42',
+          tmdbId: 42,
+          type: 'tv',
+          title: 'Old Name',
+          label: 'watched',
+          userMarkedEnded: true,
+          progress: { season: 1, episode: 8 },
+          cache: {
+            status: 'Ended',
+            seasons,
+            lastEpisode: { season: 1, episode: 8 },
+            lastFetched: '2020-01-01T00:00:00.000Z',
+          },
+        },
+      ],
+    }),
+  );
   const revivedTmdb = {
     search: async () => [],
     getDetails: async () => ({
-      title: 'New Name', year: 2020, posterPath: null, overview: '',
+      title: 'New Name',
+      year: 2020,
+      posterPath: null,
+      overview: '',
       cache: {
-        status: 'Returning Series', seasons: [...seasons, { season: 2, name: 'Season 2', episodeCount: 8, airDate: '2027-02-01' }],
-        lastEpisode: { season: 1, episode: 8 }, nextEpisode: { airDate: '2027-02-01', season: 2, episode: 1 },
+        status: 'Returning Series',
+        seasons: [...seasons, { season: 2, name: 'Season 2', episodeCount: 8, airDate: '2027-02-01' }],
+        lastEpisode: { season: 1, episode: 8 },
+        nextEpisode: { airDate: '2027-02-01', season: 2, episode: 1 },
         lastFetched: new Date().toISOString(),
       },
     }),
@@ -186,7 +246,10 @@ test('not interested: hide, list, undo, and adding from Explore records feedback
   const hid = await call('POST', '/api/explore/dislikes', { type: 'tv', tmdbId: 4 });
   assert.equal(hid.status, 201);
   assert.equal(hid.body.title, 'Station Eleven');
-  assert.deepEqual((await call('GET', '/api/explore/dislikes')).body.map((d) => d.title), ['Station Eleven']);
+  assert.deepEqual(
+    (await call('GET', '/api/explore/dislikes')).body.map((d) => d.title),
+    ['Station Eleven'],
+  );
   let ex = await call('GET', '/api/explore');
   assert.ok(!ex.body.items.some((i) => i.title === 'Station Eleven'), 'hidden from Explore');
   assert.equal(ex.body.hidden, 1);
@@ -194,7 +257,10 @@ test('not interested: hide, list, undo, and adding from Explore records feedback
 
   assert.equal((await call('DELETE', '/api/explore/dislikes/tv-4')).status, 204);
   ex = await call('GET', '/api/explore');
-  assert.ok(ex.body.items.some((i) => i.title === 'Station Eleven'), 'back after undo');
+  assert.ok(
+    ex.body.items.some((i) => i.title === 'Station Eleven'),
+    'back after undo',
+  );
   assert.equal(ex.body.stats.disliked, 0, 'undo takes the feedback back too');
   assert.equal((await call('DELETE', '/api/explore/dislikes/tv-4')).status, 404);
 
@@ -210,7 +276,10 @@ test('planned titles get where-to-watch info for your country', async () => {
   const added = await call('POST', '/api/library', { type: 'movie', tmdbId: 27205 });
   assert.equal(added.body.label, 'planned');
   assert.equal(added.body.cache.providers.region, 'US');
-  assert.deepEqual(added.body.cache.providers.rent.map((p) => p.name), ['Apple TV']);
+  assert.deepEqual(
+    added.body.cache.providers.rent.map((p) => p.name),
+    ['Apple TV'],
+  );
 
   // Changing country: the next library load looks it up again for the new one.
   await call('PUT', '/api/settings', { region: 'CA' });
@@ -220,7 +289,12 @@ test('planned titles get where-to-watch info for your country', async () => {
     const movie = body.items.find((i) => i.id === 'tmdb-movie-27205');
     assert.equal(movie.cache.providers.region, 'CA');
     assert.deepEqual(movie.cache.providers.stream, []);
-    assert.ok(body.items.filter((i) => i.label !== 'planned').every((i) => !i.cache?.providers || i.cache.providers.region !== 'CA'), 'only planned titles are looked up');
+    assert.ok(
+      body.items
+        .filter((i) => i.label !== 'planned')
+        .every((i) => !i.cache?.providers || i.cache.providers.region !== 'CA'),
+      'only planned titles are looked up',
+    );
   } finally {
     delete process.env.TMDB_API_KEY;
     await call('PUT', '/api/settings', { region: 'US' });
@@ -246,7 +320,12 @@ test('adding from Explore as Watched marks a show caught up and counts as a good
   await store.init();
   const s = createApp({ store, tmdb: fakeTmdb }).listen(0);
   await new Promise((r) => s.once('listening', r));
-  const post = (body) => fetch(`http://localhost:${s.address().port}/api/library`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
+  const post = (body) =>
+    fetch(`http://localhost:${s.address().port}/api/library`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then((r) => r.json());
   try {
     const show = await post({ type: 'tv', tmdbId: 1396, from: 'explore', label: 'watched' });
     assert.equal(show.label, 'watched');
@@ -256,7 +335,10 @@ test('adding from Explore as Watched marks a show caught up and counts as a good
     const planned = await post({ type: 'tv', tmdbId: 100088, from: 'explore' });
     assert.deepEqual(planned.progress, { season: 1, episode: 0 }, 'planned shows start at the beginning');
     const saved = JSON.parse(await fs.readFile(f, 'utf8'));
-    assert.deepEqual(saved.feedback.map((x) => `${x.action}:${x.label}`), ['added:watched', 'added:watched', 'added:planned']);
+    assert.deepEqual(
+      saved.feedback.map((x) => `${x.action}:${x.label}`),
+      ['added:watched', 'added:watched', 'added:planned'],
+    );
   } finally {
     s.close();
   }

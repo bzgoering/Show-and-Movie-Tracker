@@ -110,7 +110,9 @@ function matchMeaning(m) {
   return 'Long shot: probably not your kind of thing';
 }
 const matchTag = (c) =>
-  c.match == null ? '<span class="match">Trending</span>' : `<span class="match" title="${esc(matchMeaning(c.match))}">${c.match}% match</span>`;
+  c.match == null
+    ? '<span class="match">Trending</span>'
+    : `<span class="match" title="${esc(matchMeaning(c.match))}">${c.match}% match</span>`;
 
 function renderResults() {
   const items = ex.results.get(ex.type) || [];
@@ -137,7 +139,9 @@ function renderResults() {
 
 function setExploreType(type) {
   ex.type = type;
-  document.querySelectorAll('.explore-types .chip').forEach((c) => c.classList.toggle('active', c.dataset.type === type));
+  document
+    .querySelectorAll('.explore-types .chip')
+    .forEach((c) => c.classList.toggle('active', c.dataset.type === type));
 }
 
 document.querySelector('.explore-types').addEventListener('click', (e) => {
@@ -167,7 +171,11 @@ async function notInterested(key) {
     showExploreMessage(err.message);
     return;
   }
-  for (const [t, list] of ex.results) ex.results.set(t, list.filter((x) => keyOf(x) !== key));
+  for (const [t, list] of ex.results)
+    ex.results.set(
+      t,
+      list.filter((x) => keyOf(x) !== key),
+    );
   if (ex.openKey === key && dialog.open) dialog.close();
   ex.hiddenCount++;
   if (ex.stats) ex.stats.disliked++;
@@ -211,7 +219,8 @@ function renderStats() {
     if (s.added + s.disliked >= 3) parts.push(`${Math.round((s.added / (s.added + s.disliked)) * 100)}% hit rate`);
     if (s.tuned) parts.push('tuned to your picks');
   }
-  if (ex.hiddenCount) parts.push(`<button type="button" id="show-hidden" class="link-btn">${ex.hiddenCount} hidden</button>`);
+  if (ex.hiddenCount)
+    parts.push(`<button type="button" id="show-hidden" class="link-btn">${ex.hiddenCount} hidden</button>`);
   el.innerHTML = parts.join(' · ');
   el.hidden = parts.length === 0;
 }
@@ -302,7 +311,10 @@ detailBody.addEventListener('click', async (e) => {
   detailBody.querySelectorAll('.explore-add, #explore-dislike').forEach((b) => (b.disabled = true));
   addBtn.textContent = 'Adding…';
   try {
-    const item = await api('/api/library', { method: 'POST', body: { type: c.type, tmdbId: c.tmdbId, from: 'explore', label } });
+    const item = await api('/api/library', {
+      method: 'POST',
+      body: { type: c.type, tmdbId: c.tmdbId, from: 'explore', label },
+    });
     document.dispatchEvent(new CustomEvent('library:added', { detail: item }));
     c.added = label;
     if (ex.stats) ex.stats.added++;
@@ -337,7 +349,10 @@ servicesBtn.addEventListener('click', async () => {
 async function loadServices() {
   $('#services-list').innerHTML = '<p class="muted small">Loading services…</p>';
   try {
-    const [providers, regions] = await Promise.all([api(`/api/providers?region=${ex.settings.region}`), ex.regions.length ? ex.regions : api('/api/regions')]);
+    const [providers, regions] = await Promise.all([
+      api(`/api/providers?region=${ex.settings.region}`),
+      ex.regions.length ? ex.regions : api('/api/regions'),
+    ]);
     ex.providers = providers;
     ex.regions = regions;
     renderServices();

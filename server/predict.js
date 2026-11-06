@@ -25,7 +25,9 @@ export function predictNextRelease(cache = {}, { userMarkedEnded = false, today 
 
     let scope = premiere ? 'season' : 'episode';
     let heading = premiere ? 'Next season' : 'Next episode';
-    let label = premiere ? `Season ${next.season} premieres ${next.airDate}` : `S${next.season} E${next.episode} airs ${next.airDate}`;
+    let label = premiere
+      ? `Season ${next.season} premieres ${next.airDate}`
+      : `S${next.season} E${next.episode} airs ${next.airDate}`;
     if (pattern === 'all-at-once' && premiere) {
       label = `Season ${next.season}: all ${episodeCount ? `${episodeCount} ` : ''}episodes release ${next.airDate}`;
     } else if (pattern === 'parts' && !premiere) {
@@ -45,13 +47,17 @@ export function predictNextRelease(cache = {}, { userMarkedEnded = false, today 
       episodeName: next.name || '',
       episodeCount,
       // Only useful for weekly shows: when the current run of episodes wraps up.
-      finale: pattern === 'weekly' && sameSeason && release.finale?.airDate && release.finale.episode > next.episode ? release.finale : null,
+      finale:
+        pattern === 'weekly' && sameSeason && release.finale?.airDate && release.finale.episode > next.episode
+          ? release.finale
+          : null,
       label,
     };
   }
 
   if (userMarkedEnded) return { kind: 'ended', heading: 'Series ended', label: 'Series ended (marked by you)' };
-  if (ENDED_STATUSES.has(cache.status)) return { kind: 'ended', heading: 'Series ended', label: `Series ${cache.status.toLowerCase()}` };
+  if (ENDED_STATUSES.has(cache.status))
+    return { kind: 'ended', heading: 'Series ended', label: `Series ${cache.status.toLowerCase()}` };
 
   const premieres = (cache.seasons || [])
     .map((s) => ({ season: s.season, date: toDate(s.airDate) }))
@@ -59,7 +65,12 @@ export function predictNextRelease(cache = {}, { userMarkedEnded = false, today 
     .sort((a, b) => a.date - b.date);
 
   if (premieres.length < 2) {
-    return { kind: 'unknown', heading: 'Next season', pattern: release.pattern || 'unknown', label: 'No release date announced' };
+    return {
+      kind: 'unknown',
+      heading: 'Next season',
+      pattern: release.pattern || 'unknown',
+      label: 'No release date announced',
+    };
   }
 
   // Average the gaps between consecutive premieres; the most recent gaps say the most about the future.

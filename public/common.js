@@ -5,7 +5,10 @@ export const IMG = 'https://image.tmdb.org/t/p/';
 export const $ = (sel) => document.querySelector(sel);
 
 export const esc = (s) =>
-  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
 
 export const poster = (path, size = 'w342') => (path ? `${IMG}${size}${path}` : '');
 
@@ -37,7 +40,11 @@ export function providerStrip(providers) {
     const more = stream.length - shown.length;
     return (
       shown
-        .map((p) => (p.logoPath ? `<img src="${logo(p.logoPath)}" alt="${esc(p.name)}" title="${esc(p.name)}">` : `<span>${esc(p.name)}</span>`))
+        .map((p) =>
+          p.logoPath
+            ? `<img src="${logo(p.logoPath)}" alt="${esc(p.name)}" title="${esc(p.name)}">`
+            : `<span>${esc(p.name)}</span>`,
+        )
         .join('') + (more > 0 ? `<span class="more">+${more}</span>` : '')
     );
   }
@@ -47,7 +54,10 @@ export function providerStrip(providers) {
 
 export function providerChips(list) {
   return list
-    .map((p) => `<span class="provider">${p.logoPath ? `<img src="${logo(p.logoPath)}" alt="">` : ''}${esc(p.name)}</span>`)
+    .map(
+      (p) =>
+        `<span class="provider">${p.logoPath ? `<img src="${logo(p.logoPath)}" alt="">` : ''}${esc(p.name)}</span>`,
+    )
     .join('');
 }
 
