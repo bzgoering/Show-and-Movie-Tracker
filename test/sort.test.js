@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasGenre, libraryGenres, sortItems, releaseDate } from '../public/sort.js';
+import { hasGenre, libraryGenres, sortItems, releaseDate } from '../public/js/library/sort.js';
 
 const seasons = [{ season: 1, episodeCount: 8, airDate: '2020-01-01' }];
 const latest = { season: 1, episode: 8 };

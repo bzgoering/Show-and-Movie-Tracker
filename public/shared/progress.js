@@ -42,10 +42,6 @@ export function watchedCount(progress = { season: 1, episode: 0 }, seasons = [])
   return countBefore(seasons, progress.season) + progress.episode;
 }
 
-export function remainingCount(item) {
-  return Math.max(0, airedCount(item.cache) - watchedCount(item.progress, item.cache?.seasons));
-}
-
 // The episode after the current one, moving into the next season when needed.
 // Returns null when there is nothing after it.
 export function nextEpisode(progress, seasons = []) {
@@ -57,11 +53,6 @@ export function nextEpisode(progress, seasons = []) {
     .filter((s) => s.season > progress.season && s.episodeCount > 0)
     .sort((a, b) => a.season - b.season)[0];
   return following ? { season: following.season, episode: 1 } : null;
-}
-
-export function formatProgress(progress) {
-  if (!progress || (progress.season === 1 && progress.episode === 0)) return 'Not started';
-  return `S${progress.season} · E${progress.episode}`;
 }
 
 // What a title shows as in the library. A "Watching" show you're caught up on, with more

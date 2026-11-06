@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airedCount, formatProgress, nextEpisode, remainingCount, watchedCount } from '../public/shared/progress.js';
+import { airedCount, nextEpisode, watchedCount } from '../public/shared/progress.js';
 
 const seasons = [
   { season: 1, episodeCount: 8 },
@@ -25,17 +25,6 @@ test('counts aired and watched episodes', () => {
   const cache = { seasons, lastEpisode: { season: 3, episode: 2 } };
   assert.equal(airedCount(cache), 8 + 10 + 2);
   assert.equal(watchedCount({ season: 2, episode: 3 }, seasons), 8 + 3);
-  assert.equal(remainingCount({ progress: { season: 2, episode: 3 }, cache }), 20 - 11);
-});
-
-test('remaining never goes below zero', () => {
-  const cache = { seasons, lastEpisode: { season: 1, episode: 2 } };
-  assert.equal(remainingCount({ progress: { season: 2, episode: 5 }, cache }), 0);
-});
-
-test('formats progress', () => {
-  assert.equal(formatProgress({ season: 1, episode: 0 }), 'Not started');
-  assert.equal(formatProgress({ season: 2, episode: 5 }), 'S2 · E5');
 });
 
 import { airedSeasons, isCaughtUp, latestAired } from '../public/shared/progress.js';
@@ -127,5 +116,5 @@ test('picking "I am on S2 E4" saves S2 E3 as last watched', () => {
   const onSeason2 = progressForCurrent(2, 1);
   assert.deepEqual(onSeason2, { season: 2, episode: 0 });
   assert.deepEqual(currentEpisode({ progress: onSeason2, cache: airing }), { season: 2, episode: 1 });
-  assert.equal(remainingCount({ progress: onSeason2, cache: airing }), 4);
+  assert.equal(watchedCount(onSeason2, airing.seasons), 8, 'all of season 1 counts as watched');
 });

@@ -50,7 +50,7 @@ test('estimates the next season from the gaps between premieres', () => {
   assert.equal(p.season, 5);
   assert.equal(p.date.slice(0, 7), '2027-01');
   assert.equal(p.overdue, false);
-  assert.match(p.basis, /12 months/);
+  assert.equal(p.gapMonths, 12);
 });
 
 test('flags an estimate that has already passed as overdue', () => {
@@ -95,7 +95,7 @@ test('mid-season weekly show: "Next episode" with the season finale', () => {
     { today },
   );
   assert.equal(p.scope, 'episode');
-  assert.equal(p.heading, 'Next episode');
+  assert.equal(p.scope, 'episode');
   assert.equal(p.episodeName, 'The Trip');
   assert.deepEqual(p.finale, { episode: 10, airDate: '2026-12-04' });
 });
@@ -109,11 +109,9 @@ test('binge show: "Next season" with every episode at once', () => {
     { today },
   );
   assert.equal(p.scope, 'season');
-  assert.equal(p.heading, 'Next season');
   assert.equal(p.pattern, 'all-at-once');
   assert.equal(p.episodeCount, 8);
   assert.equal(p.finale, null);
-  assert.match(p.label, /all 8 episodes/);
 });
 
 test('weekly season premiere is a "Next season"', () => {
@@ -131,7 +129,7 @@ test('a season released in parts shows the next part', () => {
     { today },
   );
   assert.equal(p.scope, 'part');
-  assert.equal(p.heading, 'Next part');
+  assert.equal(p.scope, 'part');
 });
 
 test('estimates carry the last known release pattern', () => {
@@ -173,4 +171,17 @@ test('detects a finished show coming back', () => {
     false,
     'was never ended',
   );
+});
+
+test('ended results say who ended the show, for the page to word', () => {
+  assert.deepEqual(predictNextRelease({ status: 'Returning Series' }, { userMarkedEnded: true, today }), {
+    kind: 'ended',
+    endedBy: 'user',
+    status: 'Returning Series',
+  });
+  assert.deepEqual(predictNextRelease({ status: 'Canceled' }, { today }), {
+    kind: 'ended',
+    endedBy: 'tmdb',
+    status: 'Canceled',
+  });
 });

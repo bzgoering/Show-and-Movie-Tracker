@@ -1,5 +1,5 @@
 // Sorting for the library grid. Pure functions, so they run in the browser and in `npm test`.
-import { statusOf } from './shared/progress.js';
+import { statusOf } from '../../shared/progress.js';
 
 const PROGRESS_ORDER = { watching: 0, waiting: 1, planned: 2, watched: 3 };
 
