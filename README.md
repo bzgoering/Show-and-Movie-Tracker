@@ -31,6 +31,15 @@ There's no login and no server to sign up for. Everything is saved to a JSON fil
 
 The first time it runs, it creates an empty `data/library.json`. After that it loads whatever is in that file, so back it up or copy it to another computer to keep your list.
 
+## Updating
+
+```bash
+git pull
+npm install
+```
+
+Then restart the app (Ctrl+C in its window, then `npm start`). The page picks up changes on its own, but the server keeps running the old code until it's restarted.
+
 ## Features
 
 - Search for any movie or TV show and add it with one click
@@ -89,10 +98,37 @@ How it's worked out:
 
 Streaming info comes from [JustWatch](https://www.justwatch.com/) through TMDB.
 
-## Tests
+## Development
 
-```bash
-npm test
+| Command          | What it does                                                        |
+| ---------------- | ------------------------------------------------------------------- |
+| `npm run dev`    | Starts the app and restarts it when server files change             |
+| `npm test`       | Runs the tests (they use a fake TMDB, so no key or internet needed) |
+| `npm run lint`   | Checks the code with ESLint                                         |
+| `npm run format` | Formats everything with Prettier                                    |
+| `npm run check`  | Lint, formatting check and tests together. Run before committing.   |
+
+### Project structure
+
 ```
-
-The tests use a fake version of TMDB, so they don't need an API key or internet connection.
+server/
+  index.js            starts the app (reads .env, opens data/library.json)
+  app.js              wires the routes together; errors become JSON responses
+  routes/             the /api endpoints: library, explore, settings
+  library/items.js    rules for library titles (create, change, merge TMDB updates)
+  library/sync.js     refreshes titles from TMDB without blocking saves
+  explore/            suggestions: taste.js (your library), score.js (the match %),
+                      build.js (gathering from TMDB), feedback.js (your picks)
+  predict.js          when a show's next episode or season comes out
+  release.js          weekly vs whole-season releases
+  tmdb.js             the TMDB API client (the key never leaves the server)
+  store.js            reads and writes data/library.json safely
+public/
+  index.html, styles.css
+  shared/             code used by both the page and the server (episode progress, labels)
+  js/main.js          starts the page
+  js/library/         the Library page: store.js (your library in the browser), page.js, detail.js
+  js/explore/         the Explore page and its streaming-services panel
+  js/lib/             small helpers (API calls, dates, the router, the details pop-up)
+test/                 node:test tests, with a fake TMDB in fake-tmdb.js
+```

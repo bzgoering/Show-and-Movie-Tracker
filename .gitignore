@@ -1,4 +1,6 @@
 node_modules/
 .env
-data/*.json
+
+# Your library (and its temporary and backup copies) stays on your computer.
+data/*
 !data/.gitkeep
