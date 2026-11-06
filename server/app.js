@@ -1,6 +1,6 @@
 import express from 'express';
 import { isRevived, predictNextRelease } from './predict.js';
-import { buildExplore, exploreStats, recentSuggestion } from './explore.js';
+import { EXPLORE_TYPES, buildExplore, exploreStats, recentSuggestion } from './explore.js';
 
 // If the app is left open, anything older than this is refreshed again on the next page load.
 const STALE_MS = 6 * 60 * 60 * 1000;
@@ -281,7 +281,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
   }));
 
   app.get('/api/explore', wrap(async (req, res) => {
-    const type = ['movie', 'tv'].includes(req.query.type) ? req.query.type : 'all';
+    const type = Object.hasOwn(EXPLORE_TYPES, req.query.type ?? '') ? req.query.type : 'all';
     const data = await store.read();
     const settings = settingsOf(data);
     const items = await buildExplore({

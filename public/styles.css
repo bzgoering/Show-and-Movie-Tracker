@@ -377,6 +377,7 @@ select {
 @media (max-width: 600px) {
   .card-providers { gap: 3px; }
   .card-providers img { width: 18px; height: 18px; border-radius: 4px; }
+  .explore-types { flex-wrap: wrap; overflow: visible; gap: 4px 14px; }
   .label-picker { display: flex; width: 100%; }
   .label-btn { flex: 1; padding: 5px 6px; }
   .view-tab { flex: 1; }

@@ -171,6 +171,19 @@ export function pickSeeds(items, max = 10) {
   return [...picked, ...rest].slice(0, max);
 }
 
+// TMDB's "Animation" genre (same id for movies and TV) covers both anime and Western cartoons.
+export const ANIMATION = 16;
+export const isAnimated = (c) => (c.genreIds || []).includes(ANIMATION);
+
+// The Explore tabs. Shows are split into live action and anime & cartoons.
+export const EXPLORE_TYPES = {
+  all: { types: ['movie', 'tv'] },
+  movie: { types: ['movie'] },
+  tv: { types: ['tv'] },
+  'tv-live': { types: ['tv'], animated: false },
+  'tv-animated': { types: ['tv'], animated: true },
+};
+
 // Recently scored suggestions, so feedback (add / not interested) can record what the score was based on.
 const recent = new Map();
 export const recentSuggestion = (key) => recent.get(key) || null;
@@ -180,12 +193,13 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   const dprofile = dislikeProfile(items, dislikes);
   const weights = learnWeights(feedback);
   const owned = new Set([...items.map((i) => `${i.type}-${i.tmdbId}`), ...dislikes.map((d) => `${d.type}-${d.tmdbId}`)]);
-  const types = type === 'all' ? ['movie', 'tv'] : [type];
+  const { types, animated } = EXPLORE_TYPES[type] || EXPLORE_TYPES.all;
   const candidates = new Map();
 
   function add(list, seed) {
     for (const c of list) {
       if (!types.includes(c.type) || owned.has(keyOf(c)) || !c.posterPath) continue;
+      if (animated !== undefined && isAnimated(c) !== animated) continue;
       const entry = candidates.get(keyOf(c)) || { ...c, recommendedBy: [] };
       if (seed && !entry.recommendedBy.some((r) => r.key === seed.key)) entry.recommendedBy.push(seed);
       candidates.set(keyOf(c), entry);
@@ -207,7 +221,11 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   for (const t of types) {
     jobs.push(async () => {
       const ids = topGenres.length ? await genreIdsFor(tmdb, t, topGenres) : [];
-      const params = { ...providerParams, ...(ids.length ? { with_genres: ids.join('|') } : {}) };
+      // Anime & cartoons: popular animated titles. Live-action: your favourite genres, minus animation.
+      let genreParams = ids.length ? { with_genres: ids.join('|') } : {};
+      if (animated === true) genreParams = { with_genres: String(ANIMATION) };
+      if (animated === false) genreParams = { ...genreParams, without_genres: String(ANIMATION) };
+      const params = { ...providerParams, ...genreParams };
       add(await cached(`disc:${t}:${JSON.stringify(params)}`, 12 * HOURS, () => tmdb.discover(t, params)));
     });
   }

@@ -53,6 +53,7 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 The **Explore** tab suggests movies and shows you'll probably like, best match first. It looks at the genres you watch most, whether you lean toward movies or shows, which of your titles TMDB recommends things for, and ratings. Titles you've watched count more than ones you've only planned.
 
 - Each suggestion shows a match score, why it was suggested, and where it's streaming
+- Tabs for **All**, **Movies**, **Live-action shows** and **Anime & cartoons** (shows TMDB tags as Animation)
 - Click **Streaming** to pick the services you have, and Explore will only suggest titles on them. Your picks and country are saved in `data/library.json`.
 - Set your country with the Country picker (or `WATCH_REGION` in `.env`, default `US`)
 - Add a suggestion to your library straight from its details

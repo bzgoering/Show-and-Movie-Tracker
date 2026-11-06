@@ -62,7 +62,7 @@ export async function getDetails(type, tmdbId) {
 
 const GENRES = {
   movie: new Map([[28, 'Action'], [18, 'Drama'], [35, 'Comedy'], [878, 'Science Fiction'], [80, 'Crime'], [27, 'Horror']]),
-  tv: new Map([[10759, 'Action & Adventure'], [18, 'Drama'], [35, 'Comedy'], [10765, 'Sci-Fi & Fantasy'], [80, 'Crime']]),
+  tv: new Map([[10759, 'Action & Adventure'], [18, 'Drama'], [35, 'Comedy'], [10765, 'Sci-Fi & Fantasy'], [80, 'Crime'], [16, 'Animation']]),
 };
 const cand = (tmdbId, type, title, genreIds, voteAverage, extra = {}) => ({
   tmdbId, type, title, year: 2020, releaseDate: '2020-01-01', posterPath: `/c${tmdbId}.jpg`, overview: `${title} overview`,
@@ -70,9 +70,9 @@ const cand = (tmdbId, type, title, genreIds, voteAverage, extra = {}) => ({
 });
 export const EXPLORE = {
   'tv-1396': [cand(1, 'tv', 'Better Call Saul', [18, 80], 8.9), cand(2, 'tv', 'Ozark', [18, 80], 8.2), cand(3, 'movie', 'El Camino', [80, 18], 7.0)],
-  'tv-100088': [cand(4, 'tv', 'Station Eleven', [18, 10765], 7.9), cand(2, 'tv', 'Ozark', [18, 80], 8.2)],
+  'tv-100088': [cand(4, 'tv', 'Station Eleven', [18, 10765], 7.9), cand(2, 'tv', 'Ozark', [18, 80], 8.2), cand(11, 'tv', 'Arcane', [16, 10765, 10759], 8.7)],
   'movie-27205': [cand(5, 'movie', 'Interstellar', [878, 18], 8.6), cand(6, 'movie', 'Tenet', [28, 878], 7.2)],
-  discover: { movie: [cand(7, 'movie', 'Funny Movie', [35], 6.5), cand(5, 'movie', 'Interstellar', [878, 18], 8.6)], tv: [cand(8, 'tv', 'Sitcom', [35], 7.0), cand(9, 'tv', 'Scary Show', [27], 6.0, { posterPath: null })] },
+  discover: { movie: [cand(7, 'movie', 'Funny Movie', [35], 6.5), cand(5, 'movie', 'Interstellar', [878, 18], 8.6)], tv: [cand(8, 'tv', 'Sitcom', [35], 7.0), cand(9, 'tv', 'Scary Show', [27], 6.0, { posterPath: null }), cand(12, 'tv', 'Frieren', [16, 10759, 10765], 8.9)] },
   trending: [cand(10, 'movie', 'Trending Movie', [28], 7.5)],
 };
 const NETFLIX = { id: 8, name: 'Netflix', logoPath: '/netflix.jpg' };

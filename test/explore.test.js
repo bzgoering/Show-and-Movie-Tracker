@@ -112,3 +112,21 @@ test('hidden titles never come back, and titles similar to them drop', async () 
   assert.ok(!after.some((i) => i.title === 'Ozark'), 'hidden');
   assert.ok(after.length > 0, 'still has suggestions');
 });
+
+import { isAnimated } from '../server/explore.js';
+
+test('shows split into live action and anime & cartoons', async () => {
+  const live = await buildExplore({ tmdb: fake, items: lib, type: 'tv-live' });
+  const toons = await buildExplore({ tmdb: fake, items: lib, type: 'tv-animated' });
+  assert.ok(live.length && live.every((i) => i.type === 'tv'));
+  assert.ok(!live.some((i) => ['Arcane', 'Frieren'].includes(i.title)), 'no animation in live action');
+  assert.deepEqual(toons.map((i) => i.title).sort(), ['Arcane', 'Frieren'], 'only animated shows');
+
+  const disc = (animatedTab) => fake.calls.filter((c) => c[0] === 'discover' && c[1] === 'tv').map((c) => c[2]).find((p) => (animatedTab ? p.with_genres === '16' : p.without_genres === '16'));
+  assert.ok(disc(true), 'anime & cartoons searches animated shows');
+  assert.ok(disc(false), 'live action leaves animation out of its search');
+
+  const all = await buildExplore({ tmdb: fake, items: lib });
+  assert.ok(all.some((i) => i.title === 'Arcane') && all.some((i) => i.title === 'Ozark'), 'All still has both');
+  assert.equal(isAnimated({ genreIds: [16, 18] }), true);
+});

@@ -232,3 +232,10 @@ test('planned titles get where-to-watch info for your country', async () => {
   assert.equal(watched.status, 200);
   assert.equal(replanned.body.cache.providers.region, 'US');
 });
+
+test('explore accepts the show tabs and ignores unknown types', async () => {
+  const toons = await call('GET', '/api/explore?type=tv-animated');
+  assert.equal(toons.status, 200);
+  assert.ok(toons.body.items.every((i) => i.type === 'tv'));
+  assert.equal((await call('GET', '/api/explore?type=toString')).status, 200, 'falls back to All instead of crashing');
+});
