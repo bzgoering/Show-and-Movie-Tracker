@@ -12,7 +12,8 @@ export class TmdbError extends Error {
 }
 
 function getKey() {
-  const key = (process.env.TMDB_API_KEY || '').trim();
+  // Tolerate quotes or a pasted "Bearer " prefix around the key.
+  const key = (process.env.TMDB_API_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '');
   if (!key) {
     throw new TmdbError('TMDB_API_KEY is not set. Copy .env.example to .env and add your key.', 500);
   }
