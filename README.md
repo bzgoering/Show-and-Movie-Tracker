@@ -7,7 +7,7 @@ There's no login and no server to sign up for. Everything is saved to a JSON fil
 ## Tech
 - **Frontend:** plain JavaScript, HTML and CSS (no build step)
 - **Backend:** Node.js with Express
-- **Data:** [TMDB](https://www.themoviedb.org/) API for search, posters and episode info
+- **Data:** [TMDB](https://www.themoviedb.org/) API for search, posters, episode info, recommendations and streaming services
 - **Storage:** local JSON file (`data/library.json`)
 
 ## How to run
@@ -47,6 +47,16 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
   - **Next season (estimate)**: if nothing is announced, a guess based on how far apart past seasons came out
   - **Series ended**: when the show is over (you can also mark a show as ended yourself)
 - Every time the app starts, it updates all your saved titles from TMDB first, so you never see old info. If TMDB can't be reached, it shows your saved info instead.
+
+## Explore
+The **Explore** tab suggests movies and shows you'll probably like, best match first. It looks at the genres you watch most, whether you lean toward movies or shows, which of your titles TMDB recommends things for, and ratings. Titles you've watched count more than ones you've only planned.
+
+- Each suggestion shows a match score, why it was suggested, and where it's streaming
+- Click **Streaming** to pick the services you have, and Explore will only suggest titles on them. Your picks and country are saved in `data/library.json`.
+- Set your country with the Country picker (or `WATCH_REGION` in `.env`, default `US`)
+- Add a suggestion to your library straight from its details
+
+Streaming info comes from [JustWatch](https://www.justwatch.com/) through TMDB.
 
 ## Tests
 ```bash

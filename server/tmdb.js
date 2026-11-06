@@ -156,3 +156,91 @@ async function getReleaseInfo(tmdbId, t) {
     return null;
   }
 }
+
+// ---------- Explore: recommendations, discovery and where-to-watch ----------
+
+function toCandidate(r, fallbackType) {
+  const type = r.media_type === 'movie' || r.media_type === 'tv' ? r.media_type : fallbackType;
+  const date = (type === 'movie' ? r.release_date : r.first_air_date) || null;
+  return {
+    tmdbId: r.id,
+    type,
+    title: type === 'movie' ? r.title : r.name,
+    year: yearOf(date),
+    releaseDate: date,
+    posterPath: r.poster_path || null,
+    overview: r.overview || '',
+    genreIds: r.genre_ids || [],
+    voteAverage: r.vote_average || 0,
+    voteCount: r.vote_count || 0,
+    popularity: r.popularity || 0,
+  };
+}
+
+const genreMaps = {};
+
+// Genre id -> name, e.g. 18 -> "Drama". Fetched once per type.
+export async function genreMap(type) {
+  if (!genreMaps[type]) {
+    const data = await request(`/genre/${type}/list`);
+    genreMaps[type] = new Map((data.genres || []).map((g) => [g.id, g.name]));
+  }
+  return genreMaps[type];
+}
+
+// "If you liked this, try..." list TMDB keeps for every title.
+export async function recommendations(type, tmdbId) {
+  const data = await request(`/${type}/${tmdbId}/recommendations`, { page: 1 });
+  return (data.results || []).filter((r) => r.media_type !== 'person').map((r) => toCandidate(r, type));
+}
+
+// Popular titles matching filters, e.g. { with_genres: '18|80', with_watch_providers: '8|9', watch_region: 'US' }.
+export async function discover(type, params = {}) {
+  const data = await request(`/discover/${type}`, {
+    sort_by: 'popularity.desc',
+    include_adult: 'false',
+    'vote_count.gte': 50,
+    page: 1,
+    ...params,
+  });
+  return (data.results || []).map((r) => toCandidate(r, type));
+}
+
+export async function trending() {
+  const data = await request('/trending/all/week');
+  return (data.results || []).filter((r) => r.media_type === 'movie' || r.media_type === 'tv').map((r) => toCandidate(r));
+}
+
+const toProvider = (p) => ({ id: p.provider_id, name: p.provider_name, logoPath: p.logo_path || null });
+
+// Where a title can be watched in one country (data from JustWatch, via TMDB).
+// stream = included with a subscription, free, or free with ads.
+export async function watchProviders(type, tmdbId, region) {
+  const data = await request(`/${type}/${tmdbId}/watch/providers`);
+  const r = data.results?.[region];
+  if (!r) return { link: null, stream: [], rent: [], buy: [] };
+  const seen = new Set();
+  const stream = [...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]
+    .map(toProvider)
+    .filter((p) => !seen.has(p.id) && seen.add(p.id));
+  return { link: r.link || null, stream, rent: (r.rent || []).map(toProvider), buy: (r.buy || []).map(toProvider) };
+}
+
+// Every streaming service available in a country, most popular first.
+export async function providerList(region) {
+  const lists = await Promise.all(['movie', 'tv'].map((type) => request(`/watch/providers/${type}`, { watch_region: region })));
+  const byId = new Map();
+  for (const p of lists.flatMap((l) => l.results || [])) {
+    const priority = p.display_priorities?.[region] ?? p.display_priority ?? 999;
+    const existing = byId.get(p.provider_id);
+    if (!existing || priority < existing.priority) byId.set(p.provider_id, { ...toProvider(p), priority });
+  }
+  return [...byId.values()].sort((a, b) => a.priority - b.priority).map(({ priority, ...p }) => p);
+}
+
+export async function regions() {
+  const data = await request('/watch/providers/regions');
+  return (data.results || [])
+    .map((r) => ({ code: r.iso_3166_1, name: r.english_name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

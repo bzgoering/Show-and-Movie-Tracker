@@ -73,3 +73,35 @@ test('long read access tokens are sent as a Bearer header', async () => {
   assert.equal(requests[0].auth, 'Bearer eyJ' + 'x'.repeat(60));
   assert.equal(requests[0].apiKey, null);
 });
+
+test('where-to-watch keeps subscription, free and ad-supported services, without duplicates', async () => {
+  stub({
+    '/3/tv/1/watch/providers': { results: { US: {
+      link: 'https://www.themoviedb.org/tv/1/watch?locale=US',
+      flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg' }],
+      ads: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/n.jpg' }, { provider_id: 300, provider_name: 'Pluto TV', logo_path: '/p.jpg' }],
+      rent: [{ provider_id: 2, provider_name: 'Apple TV', logo_path: '/a.jpg' }],
+    } } },
+  });
+  const w = await tmdb.watchProviders('tv', 1, 'US');
+  assert.deepEqual(w.stream.map((p) => p.name), ['Netflix', 'Pluto TV']);
+  assert.deepEqual(w.rent.map((p) => p.name), ['Apple TV']);
+  assert.deepEqual(w.buy, []);
+  assert.equal(w.link, 'https://www.themoviedb.org/tv/1/watch?locale=US');
+  assert.deepEqual((await tmdb.watchProviders('tv', 1, 'GB')).stream, [], 'nothing listed for that country');
+});
+
+test('service list merges movie and TV services, most popular in the region first', async () => {
+  stub({
+    '/3/watch/providers/movie': { results: [{ provider_id: 9, provider_name: 'Prime Video', display_priorities: { US: 2 } }, { provider_id: 8, provider_name: 'Netflix', display_priorities: { US: 0 } }] },
+    '/3/watch/providers/tv': { results: [{ provider_id: 8, provider_name: 'Netflix', display_priorities: { US: 1 } }, { provider_id: 1899, provider_name: 'Max', display_priorities: { US: 1 } }] },
+  });
+  const list = await tmdb.providerList('US');
+  assert.deepEqual(list.map((p) => p.name), ['Netflix', 'Max', 'Prime Video']);
+});
+
+test('recommendations become candidates with genre ids and ratings', async () => {
+  stub({ '/3/tv/1/recommendations': { results: [{ id: 5, media_type: 'tv', name: 'Rec Show', first_air_date: '2021-03-01', poster_path: '/r.jpg', genre_ids: [18], vote_average: 8.1, vote_count: 900, popularity: 50 }] } });
+  const [c] = await tmdb.recommendations('tv', 1);
+  assert.deepEqual({ id: c.tmdbId, type: c.type, title: c.title, year: c.year, genres: c.genreIds, vote: c.voteAverage }, { id: 5, type: 'tv', title: 'Rec Show', year: 2021, genres: [18], vote: 8.1 });
+});

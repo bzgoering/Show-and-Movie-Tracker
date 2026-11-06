@@ -1,5 +1,6 @@
 import express from 'express';
 import { isRevived, predictNextRelease } from './predict.js';
+import { buildExplore } from './explore.js';
 
 // If the app is left open, anything older than this is refreshed again on the next page load.
 const STALE_MS = 6 * 60 * 60 * 1000;
@@ -195,6 +196,51 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
       return found;
     });
     res.json(withPrediction(item));
+  }));
+
+  // ---------- Explore ----------
+
+  const defaultRegion = () => (process.env.WATCH_REGION || 'US').toUpperCase();
+  const settingsOf = (data) => ({ region: defaultRegion(), services: [], ...(data.settings || {}) });
+
+  app.get('/api/settings', wrap(async (req, res) => {
+    res.json(settingsOf(await store.read()));
+  }));
+
+  app.put('/api/settings', wrap(async (req, res) => {
+    const body = req.body || {};
+    const settings = await store.update((data) => {
+      const next = settingsOf(data);
+      if ('region' in body) {
+        if (!/^[A-Z]{2}$/.test(String(body.region))) throw new HttpError(400, 'Region must be a two-letter country code, like US.');
+        next.region = body.region;
+      }
+      if ('services' in body) {
+        const ids = Array.isArray(body.services) ? body.services.map(Number) : [];
+        if (ids.some((id) => !Number.isInteger(id) || id <= 0) || ids.length > 50) throw new HttpError(400, 'Services must be a list of provider ids.');
+        next.services = [...new Set(ids)];
+      }
+      data.settings = next;
+      return next;
+    });
+    res.json(settings);
+  }));
+
+  app.get('/api/providers', wrap(async (req, res) => {
+    const region = String(req.query.region || settingsOf(await store.read()).region).toUpperCase();
+    res.json(await tmdb.providerList(region));
+  }));
+
+  app.get('/api/regions', wrap(async (req, res) => {
+    res.json(await tmdb.regions());
+  }));
+
+  app.get('/api/explore', wrap(async (req, res) => {
+    const type = ['movie', 'tv'].includes(req.query.type) ? req.query.type : 'all';
+    const data = await store.read();
+    const settings = settingsOf(data);
+    const items = await buildExplore({ tmdb, items: data.items, region: settings.region, services: settings.services, type });
+    res.json({ items, ...settings });
   }));
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));

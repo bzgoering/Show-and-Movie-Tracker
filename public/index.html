@@ -9,13 +9,17 @@
 <body>
   <header class="topbar">
     <h1 class="brand">Show &amp; Movie Tracker</h1>
+    <nav class="views" aria-label="Pages">
+      <button class="view-tab active" data-view="library">Library</button>
+      <button class="view-tab" data-view="explore">Explore</button>
+    </nav>
     <div class="search">
       <input id="search-input" type="search" placeholder="Add a movie or show…" autocomplete="off" aria-label="Search TMDB to add a movie or show">
       <ul id="search-results" class="search-results" hidden></ul>
     </div>
   </header>
 
-  <main>
+  <main id="library-view">
     <div class="library-bar">
       <nav class="filters" aria-label="Filter library">
         <button class="chip active" data-filter="all">All</button>
@@ -43,6 +47,34 @@
     <p id="message" class="message" hidden></p>
     <section id="grid" class="grid" aria-live="polite"></section>
     <p id="empty" class="empty" hidden>Nothing here yet. Search for a movie or show above to add it.</p>
+  </main>
+
+  <main id="explore-view" hidden>
+    <div class="library-bar">
+      <nav class="filters explore-types" aria-label="Suggestion type">
+        <button class="chip active" data-type="all">All</button>
+        <button class="chip" data-type="movie">Movies</button>
+        <button class="chip" data-type="tv">Shows</button>
+      </nav>
+      <div class="list-controls">
+        <button id="services-btn" class="services-btn">Streaming: All services</button>
+      </div>
+    </div>
+
+    <section id="services-panel" class="services-panel" hidden>
+      <div class="services-head">
+        <strong>Your streaming services</strong>
+        <label class="region">Country <select id="region-select"></select></label>
+      </div>
+      <p class="muted small">Pick the services you have, and Explore will only suggest titles you can stream on them. Pick none to see everything. <button type="button" id="services-clear" class="link-btn">Clear</button></p>
+      <div id="services-list" class="services-list"></div>
+    </section>
+
+    <p id="explore-message" class="message" hidden></p>
+    <p id="explore-loading" class="empty" hidden>Finding things you'll like…</p>
+    <section id="explore-grid" class="grid" aria-live="polite"></section>
+    <p id="explore-empty" class="empty" hidden></p>
+    <p class="attribution">Suggestions and streaming info from TMDB. Streaming data provided by JustWatch.</p>
   </main>
 
   <dialog id="detail" class="detail">

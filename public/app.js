@@ -1,7 +1,8 @@
+import { $, api, esc, poster } from './common.js';
+import './explore-page.js';
 import { hasGenre, libraryGenres, sortItems } from './sort.js';
 import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
 
-const IMG = 'https://image.tmdb.org/t/p/';
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
 const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 'watched'] };
 
@@ -17,29 +18,11 @@ function savedSort() {
 
 const state = { items: [], filter: 'all', query: '', sort: savedSort(), genre: '', openId: null };
 
-const $ = (sel) => document.querySelector(sel);
 const grid = $('#grid');
 const searchInput = $('#search-input');
 const searchResults = $('#search-results');
 const dialog = $('#detail');
 const detailBody = $('#detail-body');
-
-const esc = (s) =>
-  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-
-const poster = (path, size = 'w342') => (path ? `${IMG}${size}${path}` : '');
-
-async function api(path, options = {}) {
-  const res = await fetch(path, {
-    ...options,
-    headers: { 'Content-Type': 'application/json' },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (res.status === 204) return null;
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
 
 function showMessage(text) {
   const el = $('#message');
@@ -51,7 +34,14 @@ function upsert(item) {
   const i = state.items.findIndex((x) => x.id === item.id);
   if (i === -1) state.items.unshift(item);
   else state.items[i] = item;
+  document.dispatchEvent(new CustomEvent('library:changed'));
 }
+
+// Titles added from the Explore page.
+document.addEventListener('library:added', (e) => {
+  upsert(e.detail);
+  renderGrid();
+});
 
 // ---------- Library grid ----------
 
@@ -532,6 +522,7 @@ detailBody.addEventListener('click', async (e) => {
     try {
       await api(`/api/library/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
       state.items = state.items.filter((i) => i.id !== item.id);
+      document.dispatchEvent(new CustomEvent('library:changed'));
       dialog.close();
       renderGrid();
     } catch (err) {

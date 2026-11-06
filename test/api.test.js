@@ -160,3 +160,23 @@ test('a finished show that comes back moves out of Watched on refresh', async ()
     delete process.env.TMDB_API_KEY;
   }
 });
+
+test('settings save region and services', async () => {
+  const def = (await call('GET', '/api/settings')).body;
+  assert.equal(def.region, 'US');
+  assert.deepEqual(def.services, []);
+  const saved = await call('PUT', '/api/settings', { region: 'CA', services: [8, '1899', 8] });
+  assert.deepEqual(saved.body, { region: 'CA', services: [8, 1899] });
+  assert.equal((await call('PUT', '/api/settings', { region: 'usa' })).status, 400);
+  assert.equal((await call('PUT', '/api/settings', { services: ['x'] })).status, 400);
+  await call('PUT', '/api/settings', { region: 'US', services: [] });
+});
+
+test('explore, providers and regions endpoints', async () => {
+  const ex = await call('GET', '/api/explore?type=tv');
+  assert.equal(ex.status, 200);
+  assert.ok(ex.body.items.length > 0 && ex.body.items.every((i) => i.type === 'tv'));
+  assert.equal(ex.body.region, 'US');
+  assert.equal((await call('GET', '/api/providers')).body[0].name, 'Netflix');
+  assert.equal((await call('GET', '/api/regions')).body[1].code, 'US');
+});
