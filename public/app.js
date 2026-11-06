@@ -346,7 +346,12 @@ function tvSection(item) {
       <h3>What's next</h3>
       ${nextBox(pred)}
       <p class="muted small">TMDB status: ${esc(c.status || 'unknown')} · ${c.numberOfSeasons || 0} season${c.numberOfSeasons === 1 ? '' : 's'}, ${c.numberOfEpisodes || 0} episodes</p>
-      <label class="check"><input type="checkbox" id="ended-toggle" ${item.userMarkedEnded ? 'checked' : ''}> This series has ended</label>
+      ${
+        // Only offer the toggle when TMDB still thinks the show is ongoing.
+        ['Ended', 'Canceled'].includes(c.status)
+          ? ''
+          : `<label class="check"><input type="checkbox" id="ended-toggle" ${item.userMarkedEnded ? 'checked' : ''}> This series has ended</label>`
+      }
     </section>`;
 }
 
