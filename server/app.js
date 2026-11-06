@@ -1,5 +1,5 @@
 import express from 'express';
-import { predictNextRelease } from './predict.js';
+import { isRevived, predictNextRelease } from './predict.js';
 
 // If the app is left open, anything older than this is refreshed again on the next page load.
 const STALE_MS = 6 * 60 * 60 * 1000;
@@ -35,6 +35,16 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
 
   async function refreshItem(item) {
     const details = await tmdb.getDetails(item.type, item.tmdbId);
+
+    // A finished show came back (renewed, revived, rebranded): un-finish it so it shows up
+    // again under Waiting, or Watching if new episodes are already out.
+    if (item.type === 'tv' && item.cache && isRevived(item.cache, details.cache, item.userMarkedEnded)) {
+      item.userMarkedEnded = false;
+      if (item.label === 'watched') item.label = 'watching';
+      item.revivedAt = new Date().toISOString();
+      console.log(`[sync] "${details.title}" is back (${details.cache.status}). Moved it out of Watched.`);
+    }
+
     Object.assign(item, {
       title: details.title,
       year: details.year,

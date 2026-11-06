@@ -121,3 +121,42 @@ test('syncOnStart refreshes every saved title before the first page load', async
     delete process.env.TMDB_API_KEY;
   }
 });
+
+test('a finished show that comes back moves out of Watched on refresh', async () => {
+  const f = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-revive-')), 'library.json');
+  const seasons = [{ season: 1, name: 'Season 1', episodeCount: 8, airDate: '2020-01-01' }];
+  await fs.writeFile(f, JSON.stringify({ items: [{
+    id: 'tmdb-tv-42', tmdbId: 42, type: 'tv', title: 'Old Name', label: 'watched', userMarkedEnded: true,
+    progress: { season: 1, episode: 8 },
+    cache: { status: 'Ended', seasons, lastEpisode: { season: 1, episode: 8 }, lastFetched: '2020-01-01T00:00:00.000Z' },
+  }] }));
+  const revivedTmdb = {
+    search: async () => [],
+    getDetails: async () => ({
+      title: 'New Name', year: 2020, posterPath: null, overview: '',
+      cache: {
+        status: 'Returning Series', seasons: [...seasons, { season: 2, name: 'Season 2', episodeCount: 8, airDate: '2027-02-01' }],
+        lastEpisode: { season: 1, episode: 8 }, nextEpisode: { airDate: '2027-02-01', season: 2, episode: 1 },
+        lastFetched: new Date().toISOString(),
+      },
+    }),
+  };
+  process.env.TMDB_API_KEY = 'test';
+  const log = console.log;
+  console.log = () => {};
+  try {
+    const s = createApp({ store: createStore(f), tmdb: revivedTmdb, syncOnStart: true }).listen(0);
+    await new Promise((r) => s.once('listening', r));
+    const { items } = await (await fetch(`http://localhost:${s.address().port}/api/library`)).json();
+    s.close();
+    const show = items[0];
+    assert.equal(show.title, 'New Name', 'rebrand picked up');
+    assert.equal(show.label, 'watching', 'no longer Watched (the page shows it under Waiting)');
+    assert.equal(show.userMarkedEnded, false);
+    assert.equal(show.prediction.kind, 'confirmed');
+    assert.deepEqual(show.progress, { season: 1, episode: 8 }, 'progress kept');
+  } finally {
+    console.log = log;
+    delete process.env.TMDB_API_KEY;
+  }
+});

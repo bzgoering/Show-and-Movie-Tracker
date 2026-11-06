@@ -34,6 +34,7 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 - Search your own library by title (finds titles under any label, and ignores accents and punctuation)
 - Poster grid of everything you've added, with filters for Watching, Waiting, Planned, Watched, Movies and Shows
 - **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
+- If a show that ended comes back (renewed, revived or rebranded), it's moved out of Watched on the next start and shows up under Waiting again
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
 - Season and episode tracking for shows: pick the episode you're on (only episodes that have aired are listed), or "Caught up"
 - One-click buttons to mark the episode you're on as watched, or jump straight to the newest episode

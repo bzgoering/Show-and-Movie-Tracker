@@ -100,3 +100,15 @@ test('estimates carry the last known release pattern', () => {
   assert.equal(p.kind, 'estimated');
   assert.equal(p.pattern, 'all-at-once');
 });
+
+import { isRevived } from '../server/predict.js';
+
+test('detects a finished show coming back', () => {
+  const ended = { status: 'Ended' };
+  assert.equal(isRevived(ended, { status: 'Returning Series' }), true, 'TMDB status flipped back');
+  assert.equal(isRevived(ended, { status: 'Ended', nextEpisode: { airDate: '2027-01-01' } }), true, 'new episode scheduled');
+  assert.equal(isRevived(ended, { status: 'Ended' }), false, 'still ended');
+  assert.equal(isRevived({ status: 'Returning Series' }, { status: 'Returning Series' }, true), false, 'user-marked ended, nothing new');
+  assert.equal(isRevived({ status: 'Returning Series' }, { status: 'Returning Series', nextEpisode: { airDate: '2027-01-01' } }, true), true, 'user-marked ended, new episode');
+  assert.equal(isRevived({ status: 'Returning Series' }, { status: 'Returning Series', nextEpisode: { airDate: '2027-01-01' } }), false, 'was never ended');
+});

@@ -7,7 +7,7 @@
 //   unknown   - not enough information to guess
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ENDED_STATUSES = new Set(['Ended', 'Canceled']);
+export const ENDED_STATUSES = new Set(['Ended', 'Canceled']);
 
 const toDate = (s) => (s ? new Date(`${s}T00:00:00Z`) : null);
 const toIso = (d) => d.toISOString().slice(0, 10);
@@ -86,4 +86,13 @@ export function predictNextRelease(cache = {}, { userMarkedEnded = false, today 
       : `Season ${nextSeason} expected around ${toIso(estimate)}`,
     basis: `Seasons have premiered about every ${months} month${months === 1 ? '' : 's'}`,
   };
+}
+
+// True when a show that was over (TMDB said Ended/Canceled, or the user marked it ended)
+// has come back: TMDB lists it as ongoing again, or a new episode has been scheduled.
+export function isRevived(oldCache = {}, newCache = {}, userMarkedEnded = false) {
+  const tmdbWasEnded = ENDED_STATUSES.has(oldCache.status);
+  if (!tmdbWasEnded && !userMarkedEnded) return false;
+  if (newCache.nextEpisode?.airDate) return true;
+  return tmdbWasEnded && Boolean(newCache.status) && !ENDED_STATUSES.has(newCache.status);
 }
