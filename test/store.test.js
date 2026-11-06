@@ -14,7 +14,7 @@ test('init creates an empty library when the file is missing', async () => {
   const file = await tempFile();
   const store = createStore(file);
   assert.equal(await store.init(), 'created');
-  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), { items: [] });
+  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), { items: [], dislikes: [], feedback: [] });
 });
 
 test('init keeps an existing library', async () => {
@@ -38,7 +38,7 @@ test('a corrupt file is backed up and replaced with an empty library', async () 
   } finally {
     console.warn = warn;
   }
-  assert.deepEqual(await store.read(), { items: [] });
+  assert.deepEqual(await store.read(), { items: [], dislikes: [], feedback: [] });
   const files = await fs.readdir(path.dirname(file));
   assert.ok(files.some((f) => f.startsWith('library.json.corrupt-')));
 });
@@ -81,4 +81,12 @@ test('falls back to writing directly if the file stays locked', async () => {
   assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')).items, [{ id: 'kept' }]);
   const files = await fs.readdir(path.dirname(file));
   assert.ok(!files.includes('library.json.tmp'), 'temp file cleaned up');
+});
+
+test('older library files get the lists they are missing, and keep everything else', async () => {
+  const file = await tempFile();
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify({ items: [{ id: 'x' }], settings: { region: 'CA' } }));
+  const data = await createStore(file).read();
+  assert.deepEqual(data, { items: [{ id: 'x' }], settings: { region: 'CA' }, dislikes: [], feedback: [] });
 });

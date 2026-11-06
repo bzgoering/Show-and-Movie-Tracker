@@ -17,7 +17,7 @@ import {
   scoreCandidate,
   scoreParts,
   tasteProfile,
-} from '../server/explore.js';
+} from '../server/explore/index.js';
 import { createApp } from '../server/app.js';
 import { createStore } from '../server/store.js';
 import * as sharedFake from './fake-tmdb.js';

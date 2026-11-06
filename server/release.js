@@ -6,7 +6,7 @@
 //   unknown      - not enough dates to tell
 
 export function detectPattern(episodes = []) {
-  const dated = episodes.filter((e) => e.airDate).sort((a, b) => a.episode - b.episode);
+  const dated = episodes.filter((e) => e.airDate);
   const last = episodes.length ? episodes.reduce((a, b) => (b.episode > a.episode ? b : a)) : null;
   const finale = last ? { episode: last.episode, airDate: last.airDate || null } : null;
 

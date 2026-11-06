@@ -1,6 +1,12 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildExplore, clearExploreCache, normalizeGenres, scoreCandidate, tasteProfile } from '../server/explore.js';
+import {
+  buildExplore,
+  clearExploreCache,
+  normalizeGenres,
+  scoreCandidate,
+  tasteProfile,
+} from '../server/explore/index.js';
 import * as fake from './fake-tmdb.js';
 
 beforeEach(() => clearExploreCache());
@@ -96,7 +102,7 @@ test('an empty library falls back to popular titles', async () => {
   assert.equal(items.find((i) => i.title === 'Trending Movie').reason, 'Popular this week');
 });
 
-import { DEFAULT_WEIGHTS, dislikeProfile, dislikeScore, exploreStats, learnWeights } from '../server/explore.js';
+import { DEFAULT_WEIGHTS, dislikeProfile, dislikeScore, exploreStats, learnWeights } from '../server/explore/index.js';
 
 test('a dislike barely affects genres you watch a lot, but counts for ones you do not', () => {
   const dp = dislikeProfile(lib, [
@@ -146,7 +152,7 @@ test('hidden titles never come back, and titles similar to them drop', async () 
   assert.ok(after.length > 0, 'still has suggestions');
 });
 
-import { isAnimated } from '../server/explore.js';
+import { isAnimated } from '../server/explore/index.js';
 
 test('shows split into live action and anime & cartoons', async () => {
   const live = await buildExplore({ tmdb: fake, items: lib, type: 'tv-live' });

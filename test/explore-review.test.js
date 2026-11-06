@@ -1,7 +1,7 @@
 // Checks found while reviewing the Explore algorithm.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildExplore, clearExploreCache, reasonFor, scoreParts, tasteProfile } from '../server/explore.js';
+import { buildExplore, clearExploreCache, reasonFor, scoreParts, tasteProfile } from '../server/explore/index.js';
 import * as fake from './fake-tmdb.js';
 
 beforeEach(() => clearExploreCache());

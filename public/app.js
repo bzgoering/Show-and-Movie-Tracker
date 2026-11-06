@@ -9,7 +9,7 @@ import {
   progressForCurrent,
   progressSummary,
   statusOf,
-} from './progress.js';
+} from './shared/progress.js';
 
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
 const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 'watched'] };

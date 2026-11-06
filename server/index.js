@@ -16,6 +16,16 @@ console.log(result === 'created' ? `Created an empty library at ${libraryFile}` 
 
 const app = createApp({ store, tmdb, publicDir: path.join(root, 'public'), syncOnStart: true });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Show & Movie Tracker running at http://localhost:${port}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Is the app already running in another window?`);
+    console.error('Close it first, or start this one on another port, e.g. PORT=3001 npm start');
+  } else {
+    console.error(err);
+  }
+  process.exit(1);
 });

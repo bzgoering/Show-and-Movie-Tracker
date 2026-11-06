@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { airedCount, formatProgress, nextEpisode, remainingCount, watchedCount } from '../public/progress.js';
+import { airedCount, formatProgress, nextEpisode, remainingCount, watchedCount } from '../public/shared/progress.js';
 
 const seasons = [
   { season: 1, episodeCount: 8 },
@@ -38,7 +38,7 @@ test('formats progress', () => {
   assert.equal(formatProgress({ season: 2, episode: 5 }), 'S2 · E5');
 });
 
-import { airedSeasons, isCaughtUp, latestAired } from '../public/progress.js';
+import { airedSeasons, isCaughtUp, latestAired } from '../public/shared/progress.js';
 
 const airing = { seasons, lastEpisode: { season: 2, episode: 4 } };
 
@@ -80,7 +80,7 @@ test('without a last episode, falls back to seasons that have premiered', () => 
   assert.deepEqual(latestAired(cache), { season: 1, episode: 8 });
 });
 
-import { statusOf } from '../public/progress.js';
+import { statusOf } from '../public/shared/progress.js';
 
 test('caught-up Watching shows with more coming show as Waiting', () => {
   const show = (progress, prediction, label = 'watching') => ({
@@ -99,7 +99,7 @@ test('caught-up Watching shows with more coming show as Waiting', () => {
   assert.equal(statusOf({ type: 'movie', label: 'watched' }), 'watched');
 });
 
-import { currentEpisode, progressForCurrent, progressSummary } from '../public/progress.js';
+import { currentEpisode, progressForCurrent, progressSummary } from '../public/shared/progress.js';
 
 test('the episode you are on is the one after your last watched', () => {
   const show = (progress, prediction) => ({ type: 'tv', progress, cache: airing, prediction });

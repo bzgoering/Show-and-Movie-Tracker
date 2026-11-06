@@ -5,6 +5,19 @@ import path from 'node:path';
 // Errors Windows gives when another program (OneDrive, antivirus) has the file open.
 const LOCKED = new Set(['EPERM', 'EBUSY', 'EACCES']);
 
+// Fills in any lists an older (or brand-new) library file doesn't have yet, so the rest of the app
+// can rely on them: items, dislikes (hidden from Explore) and feedback (what you did with suggestions).
+function withDefaults(data) {
+  return {
+    ...data,
+    items: data.items,
+    dislikes: Array.isArray(data.dislikes) ? data.dislikes : [],
+    feedback: Array.isArray(data.feedback) ? data.feedback : [],
+  };
+}
+
+const EMPTY = () => withDefaults({ items: [] });
+
 export function createStore(filePath, { rename = fs.rename } = {}) {
   let queue = Promise.resolve();
 
@@ -13,19 +26,19 @@ export function createStore(filePath, { rename = fs.rename } = {}) {
     try {
       raw = await fs.readFile(filePath, 'utf8');
     } catch (err) {
-      if (err.code === 'ENOENT') return { items: [] };
+      if (err.code === 'ENOENT') return EMPTY();
       throw err;
     }
     try {
       const data = JSON.parse(raw);
       if (!data || !Array.isArray(data.items)) throw new Error('missing "items" array');
-      return data;
+      return withDefaults(data);
     } catch (err) {
       // Keep the broken file so nothing is lost, then start with an empty library.
       const backup = `${filePath}.corrupt-${Date.now()}`;
       await fs.rename(filePath, backup);
       console.warn(`[store] ${filePath} was not valid (${err.message}). Moved it to ${backup}.`);
-      return { items: [] };
+      return EMPTY();
     }
   }
 
@@ -73,7 +86,7 @@ export function createStore(filePath, { rename = fs.rename } = {}) {
     try {
       await fs.access(filePath);
     } catch {
-      await write({ items: [] });
+      await write(EMPTY());
       return 'created';
     }
     await write(await read()); // also repairs a corrupt file
