@@ -65,3 +65,50 @@ test('an empty library falls back to popular titles', async () => {
   assert.ok(items.some((i) => i.title === 'Trending Movie'));
   assert.equal(items.find((i) => i.title === 'Trending Movie').reason, 'Popular this week');
 });
+
+import { DEFAULT_WEIGHTS, dislikeProfile, dislikeScore, exploreStats, learnWeights } from '../server/explore.js';
+
+test('a dislike barely affects genres you watch a lot, but counts for ones you do not', () => {
+  const dp = dislikeProfile(lib, [{ type: 'movie', tmdbId: 1, genres: ['Drama'] }, { type: 'movie', tmdbId: 2, genres: ['Horror'] }]);
+  assert.ok(dp.genreShare.get('Horror') > 0.9, 'never watched horror, hid one');
+  assert.ok(dp.genreShare.get('Drama') < 0.4, 'watch lots of drama, hid one');
+  assert.ok(dislikeScore({ genres: ['Horror'] }, dp) > dislikeScore({ genres: ['Drama'] }, dp));
+  assert.equal(dislikeScore({ genres: ['Horror'] }, dislikeProfile(lib, [])), 0, 'no dislikes, no penalty');
+});
+
+test('dislikes counter-balance a score without outweighing your library', () => {
+  const p = tasteProfile(lib);
+  const c = { type: 'tv', genres: ['Drama', 'Crime'], voteAverage: 8, voteCount: 1000, recommendedBy: [{ weight: 3 }] };
+  const dp = dislikeProfile(lib, [{ type: 'tv', tmdbId: 9, genres: ['Crime'] }]);
+  const plain = scoreCandidate(c, p);
+  const penalized = scoreCandidate({ ...c, similarToDisliked: 2 }, p, { dprofile: dp });
+  assert.ok(penalized < plain, 'pulled down');
+  assert.ok(plain - penalized <= 0.12 + 1e-9, 'by no more than the dislike weight');
+});
+
+test('learns weights from what you add versus what you hide', () => {
+  assert.deepEqual(learnWeights([]), DEFAULT_WEIGHTS, 'not enough feedback yet');
+  const added = (rec) => ({ action: 'added', parts: { genre: 0.5, rec, quality: 0.7, type: 0.5 } });
+  const hidden = (rec) => ({ action: 'disliked', parts: { genre: 0.5, rec, quality: 0.7, type: 0.5 } });
+  const w = learnWeights([added(0.9), added(0.8), added(1), hidden(0.1), hidden(0)]);
+  assert.ok(w.rec > DEFAULT_WEIGHTS.rec, 'your adds came from recommendations, so they count more');
+  assert.ok(Math.abs(Object.values(w).reduce((a, b) => a + b, 0) - 1) < 1e-9, 'weights still add up to 1');
+  assert.ok(w.rec <= DEFAULT_WEIGHTS.rec * 1.5, 'each weight can grow by at most half');
+});
+
+test('stats report how often you add what Explore suggests', () => {
+  assert.deepEqual(exploreStats([]), { added: 0, disliked: 0, hitRate: null, tuned: false });
+  const s = exploreStats([{ action: 'added' }, { action: 'added' }, { action: 'added' }, { action: 'disliked' }]);
+  assert.equal(s.hitRate, 75);
+});
+
+test('hidden titles never come back, and titles similar to them drop', async () => {
+  const before = await buildExplore({ tmdb: fake, items: lib });
+  clearExploreCache();
+  // Hide Ozark.
+  const dislikes = [{ type: 'tv', tmdbId: 2, title: 'Ozark', genres: ['Drama', 'Crime'] }];
+  const after = await buildExplore({ tmdb: fake, items: lib, dislikes });
+  assert.ok(before.some((i) => i.title === 'Ozark'));
+  assert.ok(!after.some((i) => i.title === 'Ozark'), 'hidden');
+  assert.ok(after.length > 0, 'still has suggestions');
+});

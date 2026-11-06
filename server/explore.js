@@ -31,6 +31,7 @@ export function tasteProfile(items) {
   const top = Math.max(0, ...genres.values());
   const genreWeights = new Map([...genres].map(([g, w]) => [g, top ? w / top : 0]));
   return {
+    rawGenres: genres, // summed label weights per genre
     genreWeights, // 0..1, your favourite genre is 1
     typeShare: { movie: total ? types.movie / total : 0.5, tv: total ? types.tv / total : 0.5 },
     topGenres: [...genreWeights].sort((a, b) => b[1] - a[1]).map(([g]) => g),
@@ -38,23 +39,71 @@ export function tasteProfile(items) {
   };
 }
 
-// 0..1, higher = more likely you'd enjoy it.
-export function scoreCandidate(c, profile) {
+// The four positive signals, each 0..1.
+export function scoreParts(c, profile) {
   const genres = normalizeGenres(c.genres);
   const genreSum = genres.reduce((sum, g) => sum + (profile.genreWeights.get(g) || 0), 0);
-  const genreScore = genres.length ? Math.min(1, genreSum / Math.min(genres.length, 3)) : 0;
+  const genre = genres.length ? Math.min(1, genreSum / Math.min(genres.length, 3)) : 0;
 
   // Recommended by several of your titles = a strong signal.
-  const recScore = Math.min(1, (c.recommendedBy || []).reduce((sum, r) => sum + r.weight, 0) / 6);
+  const rec = Math.min(1, (c.recommendedBy || []).reduce((sum, r) => sum + r.weight, 0) / 6);
 
   // Rating, trusted more as votes grow.
   const confidence = Math.min(1, (c.voteCount || 0) / 500);
   const quality = ((c.voteAverage || 0) / 10) * confidence + 0.5 * (1 - confidence);
 
-  const typeScore = profile.typeShare[c.type] ?? 0.5;
+  const type = profile.typeShare[c.type] ?? 0.5;
+  return { genre, rec, quality, type };
+}
 
-  if (profile.empty) return 0.6 * quality + 0.4 * Math.min(1, (c.popularity || 0) / 200);
-  return 0.45 * genreScore + 0.3 * recScore + 0.15 * quality + 0.1 * typeScore;
+export const DEFAULT_WEIGHTS = { genre: 0.45, rec: 0.3, quality: 0.15, type: 0.1 };
+
+// How much "Not interested" can pull a score down. Smaller than the genre and
+// recommendation signals, so dislikes balance the picture rather than drive it.
+export const DISLIKE_WEIGHT = 0.12;
+
+// Learns which signals actually predict what you add, from your Explore history.
+// Compares the signals behind titles you added with the ones you hid, and nudges
+// each weight up or down by at most half. Needs a few of each before it changes anything.
+export function learnWeights(feedback = []) {
+  const added = feedback.filter((f) => f.action === 'added' && f.parts);
+  const hidden = feedback.filter((f) => f.action === 'disliked' && f.parts);
+  if (added.length < 3 || hidden.length < 2) return { ...DEFAULT_WEIGHTS };
+  const mean = (list, k) => list.reduce((sum, f) => sum + (f.parts[k] || 0), 0) / list.length;
+  const raw = {};
+  for (const [k, w] of Object.entries(DEFAULT_WEIGHTS)) {
+    const diff = mean(added, k) - mean(hidden, k); // -1..1
+    raw[k] = w * Math.min(1.5, Math.max(0.5, 1 + 0.8 * diff));
+  }
+  const total = Object.values(raw).reduce((a, b) => a + b, 0);
+  return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v / total]));
+}
+
+// What your "Not interested" titles have in common.
+// A genre counts against a title only as far as you hide it more than you watch it.
+export function dislikeProfile(items, dislikes = []) {
+  const liked = tasteProfile(items).rawGenres;
+  const hidden = new Map();
+  for (const d of dislikes) for (const g of normalizeGenres(d.genres)) hidden.set(g, (hidden.get(g) || 0) + 2);
+  const share = new Map([...hidden].map(([g, h]) => [g, h / (h + (liked.get(g) || 0))]));
+  return { genreShare: share, empty: dislikes.length === 0 };
+}
+
+// 0..1: how much a candidate looks like what you've hidden.
+export function dislikeScore(c, dprofile) {
+  if (!dprofile || dprofile.empty) return 0;
+  const genres = normalizeGenres(c.genres);
+  const genre = genres.length ? genres.reduce((sum, g) => sum + (dprofile.genreShare.get(g) || 0), 0) / genres.length : 0;
+  const similar = Math.min(1, (c.similarToDisliked || 0) / 2);
+  return 0.6 * genre + 0.4 * similar;
+}
+
+// 0..1, higher = more likely you'd enjoy it.
+export function scoreCandidate(c, profile, { weights = DEFAULT_WEIGHTS, dprofile = null } = {}) {
+  const parts = scoreParts(c, profile);
+  if (profile.empty) return 0.6 * parts.quality + 0.4 * Math.min(1, (c.popularity || 0) / 200);
+  const positive = Object.entries(weights).reduce((sum, [k, w]) => sum + w * parts[k], 0);
+  return Math.max(0, positive - DISLIKE_WEIGHT * dislikeScore(c, dprofile));
 }
 
 // A short, human reason for a suggestion.
@@ -98,9 +147,15 @@ async function genreIdsFor(tmdb, type, wanted) {
   return [...map].filter(([, name]) => normalizeGenres([name]).some((g) => wanted.includes(g))).map(([id]) => id);
 }
 
-export async function buildExplore({ tmdb, items, region = 'US', services = [], type = 'all', limit = 40 }) {
+// Recently scored suggestions, so feedback (add / not interested) can record what the score was based on.
+const recent = new Map();
+export const recentSuggestion = (key) => recent.get(key) || null;
+
+export async function buildExplore({ tmdb, items, region = 'US', services = [], type = 'all', limit = 40, dislikes = [], feedback = [] }) {
   const profile = tasteProfile(items);
-  const owned = new Set(items.map((i) => `${i.type}-${i.tmdbId}`));
+  const dprofile = dislikeProfile(items, dislikes);
+  const weights = learnWeights(feedback);
+  const owned = new Set([...items.map((i) => `${i.type}-${i.tmdbId}`), ...dislikes.map((d) => `${d.type}-${d.tmdbId}`)]);
   const types = type === 'all' ? ['movie', 'tv'] : [type];
   const candidates = new Map();
 
@@ -137,6 +192,15 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   }
   if (profile.empty) jobs.push(async () => add(await cached('trending', 6 * HOURS, () => tmdb.trending())));
 
+  // Titles TMDB considers similar to your most recent "Not interested" picks.
+  const similarToDisliked = new Map();
+  for (const d of dislikes.slice(-5)) {
+    jobs.push(async () => {
+      const list = await cached(`rec:${d.type}:${d.tmdbId}`, 24 * HOURS, () => tmdb.recommendations(d.type, d.tmdbId));
+      for (const c of list) similarToDisliked.set(keyOf(c), (similarToDisliked.get(keyOf(c)) || 0) + 1);
+    });
+  }
+
   const results = await Promise.allSettled(jobs.map((job) => job()));
   const firstError = results.find((r) => r.status === 'rejected');
   if (candidates.size === 0 && firstError) throw firstError.reason;
@@ -145,8 +209,8 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   const maps = Object.fromEntries(await Promise.all(types.map(async (t) => [t, await tmdb.genreMap(t)])));
   const scored = [...candidates.values()].map((c) => {
     const genres = c.genreIds.map((id) => maps[c.type]?.get(id)).filter(Boolean);
-    const withGenres = { ...c, genres };
-    return { ...withGenres, score: scoreCandidate(withGenres, profile), reason: reasonFor(withGenres, profile) };
+    const withGenres = { ...c, genres, similarToDisliked: similarToDisliked.get(keyOf(c)) || 0 };
+    return { ...withGenres, score: scoreCandidate(withGenres, profile, { weights, dprofile }), reason: reasonFor(withGenres, profile) };
   });
   scored.sort((a, b) => b.score - a.score);
 
@@ -161,12 +225,30 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
   });
 
   const wanted = new Set(services.map(Number));
-  return shortlist
+  const picks = shortlist
     .filter((c) => !wanted.size || c.providers.stream.some((p) => wanted.has(p.id)))
     .slice(0, limit)
-    .map(({ genreIds, genres, recommendedBy, popularity, voteCount, ...c }) => ({ ...c, match: Math.round(c.score * 100) }));
+    .map((c) => ({ ...c, match: Math.round(c.score * 100) }));
+
+  for (const c of picks) {
+    recent.set(keyOf(c), { type: c.type, tmdbId: c.tmdbId, title: c.title, posterPath: c.posterPath, genres: c.genres, match: c.match, parts: scoreParts(c, profile) });
+  }
+  while (recent.size > 2000) recent.delete(recent.keys().next().value);
+
+  return picks.map(({ genreIds, genres, recommendedBy, popularity, voteCount, similarToDisliked: _s, ...c }) => c);
+}
+
+// How Explore is doing: of the suggestions you acted on, how many you added.
+export function exploreStats(feedback = []) {
+  const added = feedback.filter((f) => f.action === 'added').length;
+  const disliked = feedback.filter((f) => f.action === 'disliked').length;
+  const acted = added + disliked;
+  const weights = learnWeights(feedback);
+  const tuned = Object.entries(weights).some(([k, w]) => Math.abs(w - DEFAULT_WEIGHTS[k]) > 0.005);
+  return { added, disliked, hitRate: acted ? Math.round((added / acted) * 100) : null, tuned };
 }
 
 export function clearExploreCache() {
   cache.clear();
+  recent.clear();
 }

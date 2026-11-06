@@ -180,3 +180,27 @@ test('explore, providers and regions endpoints', async () => {
   assert.equal((await call('GET', '/api/providers')).body[0].name, 'Netflix');
   assert.equal((await call('GET', '/api/regions')).body[1].code, 'US');
 });
+
+test('not interested: hide, list, undo, and adding from Explore records feedback', async () => {
+  await call('GET', '/api/explore'); // scores suggestions so feedback can record their signals
+  const hid = await call('POST', '/api/explore/dislikes', { type: 'tv', tmdbId: 4 });
+  assert.equal(hid.status, 201);
+  assert.equal(hid.body.title, 'Station Eleven');
+  assert.deepEqual((await call('GET', '/api/explore/dislikes')).body.map((d) => d.title), ['Station Eleven']);
+  let ex = await call('GET', '/api/explore');
+  assert.ok(!ex.body.items.some((i) => i.title === 'Station Eleven'), 'hidden from Explore');
+  assert.equal(ex.body.hidden, 1);
+  assert.equal(ex.body.stats.disliked, 1);
+
+  assert.equal((await call('DELETE', '/api/explore/dislikes/tv-4')).status, 204);
+  ex = await call('GET', '/api/explore');
+  assert.ok(ex.body.items.some((i) => i.title === 'Station Eleven'), 'back after undo');
+  assert.equal(ex.body.stats.disliked, 0, 'undo takes the feedback back too');
+  assert.equal((await call('DELETE', '/api/explore/dislikes/tv-4')).status, 404);
+
+  // Hide it again, then add it from Explore: it leaves the hidden list and counts as a hit.
+  await call('POST', '/api/explore/dislikes', { type: 'tv', tmdbId: 1 });
+  const saved = JSON.parse(await fs.readFile(file, 'utf8'));
+  assert.ok(saved.dislikes.some((d) => d.tmdbId === 1));
+  assert.ok(saved.feedback.at(-1).parts, 'signals recorded with the feedback');
+});

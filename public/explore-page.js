@@ -10,6 +10,8 @@ const ex = {
   regions: [],
   showAllServices: false,
   openKey: null,
+  stats: null, // { added, disliked, hitRate, tuned }
+  hiddenCount: 0,
 };
 
 const views = { library: $('#library-view'), explore: $('#explore-view') };
@@ -84,8 +86,11 @@ async function loadResults() {
   $('#explore-loading').hidden = false;
   showExploreMessage('');
   try {
-    const { items } = await api(`/api/explore?type=${type}`);
+    const { items, stats, hidden } = await api(`/api/explore?type=${type}`);
     ex.results.set(type, items);
+    ex.stats = stats;
+    ex.hiddenCount = hidden;
+    renderStats();
   } catch (err) {
     showExploreMessage(`Couldn't load suggestions: ${err.message}`);
   } finally {
@@ -118,12 +123,15 @@ function renderResults() {
   exploreGrid.innerHTML = items
     .map(
       (c) => `
-      <button class="card" data-key="${esc(keyOf(c))}" title="${esc(c.title)}">
-        <div class="poster"><img src="${poster(c.posterPath)}" alt="" loading="lazy"></div>
-        <div class="card-title">${esc(c.title)}</div>
-        <div class="card-meta"><span class="match">${c.match}% match</span> · ${c.type === 'tv' ? 'TV' : 'Movie'}${c.year ? ` · ${c.year}` : ''}</div>
-        <div class="card-providers">${providerStrip(c)}</div>
-      </button>`,
+      <div class="explore-item${c.added ? ' added' : ''}">
+        <button class="card" data-key="${esc(keyOf(c))}" title="${esc(c.title)}">
+          <div class="poster"><img src="${poster(c.posterPath)}" alt="" loading="lazy"></div>
+          <div class="card-title">${esc(c.title)}</div>
+          <div class="card-meta"><span class="match">${c.match}% match</span> · ${c.type === 'tv' ? 'TV' : 'Movie'}${c.year ? ` · ${c.year}` : ''}</div>
+          <div class="card-providers">${providerStrip(c)}</div>
+        </button>
+        ${c.added ? '' : `<button class="dismiss" data-key="${esc(keyOf(c))}" title="Not interested" aria-label="Not interested in ${esc(c.title)}">✕</button>`}
+      </div>`,
     )
     .join('');
   const empty = $('#explore-empty');
@@ -143,8 +151,98 @@ document.querySelector('.explore-types').addEventListener('click', (e) => {
 });
 
 exploreGrid.addEventListener('click', (e) => {
+  const dismiss = e.target.closest('.dismiss');
+  if (dismiss) return notInterested(dismiss.dataset.key);
   const card = e.target.closest('.card');
   if (card) openSuggestion(card.dataset.key);
+});
+
+// ---------- Not interested ----------
+
+async function notInterested(key) {
+  const c = findSuggestion(key);
+  if (!c) return;
+  try {
+    await api('/api/explore/dislikes', { method: 'POST', body: { type: c.type, tmdbId: c.tmdbId } });
+  } catch (err) {
+    showExploreMessage(err.message);
+    return;
+  }
+  for (const [t, list] of ex.results) ex.results.set(t, list.filter((x) => keyOf(x) !== key));
+  if (ex.openKey === key && dialog.open) dialog.close();
+  ex.hiddenCount++;
+  if (ex.stats) ex.stats.disliked++;
+  renderResults();
+  renderStats();
+  toast(`Hidden "${c.title}". Explore will suggest less like it.`, () => unhide(key));
+}
+
+async function unhide(key) {
+  try {
+    await api(`/api/explore/dislikes/${encodeURIComponent(key)}`, { method: 'DELETE' });
+  } catch (err) {
+    showExploreMessage(err.message);
+    return;
+  }
+  ex.results.clear(); // scores change when a dislike goes away
+  loadResults();
+}
+
+let toastTimer;
+function toast(text, onUndo) {
+  const el = $('#toast');
+  el.innerHTML = `<span>${esc(text)}</span>${onUndo ? '<button type="button" class="link-btn">Undo</button>' : ''}`;
+  el.hidden = false;
+  el.querySelector('button')?.addEventListener('click', () => {
+    el.hidden = true;
+    onUndo();
+  });
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (el.hidden = true), 7000);
+}
+
+// "Your picks" line: how often you add what Explore suggests, plus the hidden list.
+function renderStats() {
+  const el = $('#explore-stats');
+  const s = ex.stats;
+  const parts = [];
+  if (s && s.added + s.disliked > 0) {
+    parts.push(`Your picks: ${s.added} added, ${s.disliked} not interested`);
+    // A percentage means little until you've acted on a few suggestions.
+    if (s.added + s.disliked >= 3) parts.push(`${Math.round((s.added / (s.added + s.disliked)) * 100)}% hit rate`);
+    if (s.tuned) parts.push('tuned to your picks');
+  }
+  if (ex.hiddenCount) parts.push(`<button type="button" id="show-hidden" class="link-btn">${ex.hiddenCount} hidden</button>`);
+  el.innerHTML = parts.join(' · ');
+  el.hidden = parts.length === 0;
+}
+
+$('#explore-stats').addEventListener('click', async (e) => {
+  if (e.target.id !== 'show-hidden') return;
+  let list = [];
+  try {
+    list = await api('/api/explore/dislikes');
+  } catch (err) {
+    showExploreMessage(err.message);
+    return;
+  }
+  ex.openKey = null;
+  detailBody.innerHTML = `
+    <h2>Hidden from Explore</h2>
+    <p class="muted small">Titles you marked "Not interested". Explore won't suggest them, and suggests a little less like them.</p>
+    <ul class="hidden-list">
+      ${list
+        .map(
+          (d) => `
+        <li>
+          ${d.posterPath ? `<img src="${poster(d.posterPath, 'w92')}" alt="">` : '<span class="thumb-empty"></span>'}
+          <span class="hidden-title">${esc(d.title)}<span class="muted small"> · ${d.type === 'tv' ? 'TV' : 'Movie'}</span></span>
+          <button type="button" class="unhide" data-key="${esc(`${d.type}-${d.tmdbId}`)}">Show again</button>
+        </li>`,
+        )
+        .join('')}
+    </ul>`;
+  if (!dialog.open) dialog.showModal();
 });
 
 // ---------- Suggestion detail ----------
@@ -182,7 +280,11 @@ function openSuggestion(key) {
         <p class="muted">${c.type === 'tv' ? 'TV show' : 'Movie'}${c.year ? ` · ${c.year}` : ''} · <span class="match">${c.match}% match</span></p>
         <p class="muted small">${esc(c.reason)}</p>
         <div class="row buttons">
-          ${c.added ? '<span class="caught-up">✓ In your library</span>' : '<button id="explore-add" class="primary">Add to library</button>'}
+          ${
+            c.added
+              ? '<span class="caught-up">✓ In your library</span>'
+              : '<button id="explore-add" class="primary">Add to library</button><button id="explore-dislike" class="secondary">Not interested</button>'
+          }
         </div>
         ${c.overview ? `<p class="overview">${esc(c.overview)}</p>` : ''}
       </div>
@@ -200,16 +302,26 @@ dialog.addEventListener('close', () => {
 });
 
 detailBody.addEventListener('click', async (e) => {
+  const unhideBtn = e.target.closest('.unhide');
+  if (unhideBtn) {
+    unhideBtn.closest('li').remove();
+    ex.hiddenCount = Math.max(0, ex.hiddenCount - 1);
+    renderStats();
+    return unhide(unhideBtn.dataset.key);
+  }
+  if (e.target.id === 'explore-dislike' && ex.openKey) return notInterested(ex.openKey);
   if (e.target.id !== 'explore-add' || !ex.openKey) return;
   const c = findSuggestion(ex.openKey);
   e.target.disabled = true;
   e.target.textContent = 'Adding…';
   try {
-    const item = await api('/api/library', { method: 'POST', body: { type: c.type, tmdbId: c.tmdbId } });
+    const item = await api('/api/library', { method: 'POST', body: { type: c.type, tmdbId: c.tmdbId, from: 'explore' } });
     document.dispatchEvent(new CustomEvent('library:added', { detail: item }));
     c.added = true;
+    if (ex.stats) ex.stats.added++;
     openSuggestion(ex.openKey);
-    exploreGrid.querySelector(`[data-key="${CSS.escape(keyOf(c))}"]`)?.classList.add('added');
+    renderResults();
+    renderStats();
   } catch (err) {
     e.target.disabled = false;
     e.target.textContent = 'Add to library';

@@ -1,6 +1,6 @@
 import express from 'express';
 import { isRevived, predictNextRelease } from './predict.js';
-import { buildExplore } from './explore.js';
+import { buildExplore, exploreStats, recentSuggestion } from './explore.js';
 
 // If the app is left open, anything older than this is refreshed again on the next page load.
 const STALE_MS = 6 * 60 * 60 * 1000;
@@ -18,6 +18,13 @@ class HttpError extends Error {
 }
 
 const itemId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;
+
+// Remembers what you did with an Explore suggestion and what its score was based on,
+// so Explore can learn which signals match your taste (see learnWeights in explore.js).
+function recordFeedback(data, type, tmdbId, action) {
+  const s = recentSuggestion(`${type}-${tmdbId}`);
+  data.feedback = [...(data.feedback || []), { key: `${type}-${tmdbId}`, action, match: s?.match ?? null, parts: s?.parts ?? null, at: new Date().toISOString() }].slice(-500);
+}
 
 function withPrediction(item) {
   if (item.type !== 'tv') return item;
@@ -118,6 +125,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
       throw new HttpError(400, 'Body must include type ("movie" or "tv") and a numeric tmdbId.');
     }
     const label = LABELS[type].includes(req.body.label) ? req.body.label : 'planned';
+    const fromExplore = req.body.from === 'explore';
     const details = await tmdb.getDetails(type, id);
 
     const item = await store.update((data) => {
@@ -138,6 +146,12 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
         addedAt: now,
         updatedAt: now,
       };
+      if (fromExplore) {
+        created.addedFrom = 'explore';
+        recordFeedback(data, type, id, 'added');
+      }
+      // Adding something you'd hidden means you're interested after all.
+      if (data.dislikes) data.dislikes = data.dislikes.filter((d) => !(d.type === type && d.tmdbId === id));
       data.items.unshift(created);
       return created;
     });
@@ -239,8 +253,59 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
     const type = ['movie', 'tv'].includes(req.query.type) ? req.query.type : 'all';
     const data = await store.read();
     const settings = settingsOf(data);
-    const items = await buildExplore({ tmdb, items: data.items, region: settings.region, services: settings.services, type });
-    res.json({ items, ...settings });
+    const items = await buildExplore({
+      tmdb,
+      items: data.items,
+      region: settings.region,
+      services: settings.services,
+      type,
+      dislikes: data.dislikes || [],
+      feedback: data.feedback || [],
+    });
+    res.json({ items, ...settings, hidden: (data.dislikes || []).length, stats: exploreStats(data.feedback) });
+  }));
+
+  // "Not interested": hides a suggestion and counts against titles like it.
+  app.get('/api/explore/dislikes', wrap(async (req, res) => {
+    res.json([...((await store.read()).dislikes || [])].reverse());
+  }));
+
+  app.post('/api/explore/dislikes', wrap(async (req, res) => {
+    const { type, tmdbId } = req.body || {};
+    const id = Number(tmdbId);
+    if (!LABELS[type] || !Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Body must include type and tmdbId.');
+    let info = recentSuggestion(`${type}-${id}`);
+    if (!info) {
+      const d = await tmdb.getDetails(type, id);
+      info = { title: d.title, posterPath: d.posterPath, genres: d.cache.genres || [] };
+    }
+    const dislike = await store.update((data) => {
+      data.dislikes = data.dislikes || [];
+      const existing = data.dislikes.find((d) => d.type === type && d.tmdbId === id);
+      if (existing) return existing;
+      const created = { type, tmdbId: id, title: info.title, posterPath: info.posterPath || null, genres: info.genres || [], at: new Date().toISOString() };
+      data.dislikes.push(created);
+      recordFeedback(data, type, id, 'disliked');
+      return created;
+    });
+    res.status(201).json(dislike);
+  }));
+
+  app.delete('/api/explore/dislikes/:key', wrap(async (req, res) => {
+    const m = /^(movie|tv)-(\d+)$/.exec(req.params.key);
+    if (!m) throw new HttpError(400, 'Key must look like tv-123.');
+    const [, type, idText] = m;
+    const id = Number(idText);
+    await store.update((data) => {
+      const before = (data.dislikes || []).length;
+      data.dislikes = (data.dislikes || []).filter((d) => !(d.type === type && d.tmdbId === id));
+      if (data.dislikes.length === before) throw new HttpError(404, 'That title is not hidden.');
+      // Undoing also takes back the feedback, so a mis-click doesn't teach Explore anything.
+      const fb = data.feedback || [];
+      const last = fb.map((f) => f.key === req.params.key && f.action === 'disliked').lastIndexOf(true);
+      if (last !== -1) fb.splice(last, 1);
+    });
+    res.status(204).end();
   }));
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
