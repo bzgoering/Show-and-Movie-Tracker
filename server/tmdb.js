@@ -86,6 +86,7 @@ export async function getDetails(type, tmdbId) {
       cache: {
         status: m.status || '',
         releaseDate: m.release_date || null,
+        genres: (m.genres || []).map((g) => g.name), // used for sorting only
         runtime: m.runtime || null,
         lastFetched: new Date().toISOString(),
       },
@@ -102,6 +103,8 @@ export async function getDetails(type, tmdbId) {
       overview: t.overview || '',
       cache: {
         status: t.status || '',
+        firstAirDate: t.first_air_date || null,
+        genres: (t.genres || []).map((g) => g.name), // used for sorting only
         inProduction: Boolean(t.in_production),
         numberOfSeasons: t.number_of_seasons || 0,
         numberOfEpisodes: t.number_of_episodes || 0,

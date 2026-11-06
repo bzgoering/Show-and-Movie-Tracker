@@ -1,10 +1,20 @@
+import { sortItems } from './sort.js';
 import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
 
 const IMG = 'https://image.tmdb.org/t/p/';
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
 const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 'watched'] };
 
-const state = { items: [], filter: 'all', query: '', openId: null };
+// The chosen sort is remembered in this browser between visits.
+function savedSort() {
+  try {
+    return localStorage.getItem('sort') || 'title';
+  } catch {
+    return 'title';
+  }
+}
+
+const state = { items: [], filter: 'all', query: '', sort: savedSort(), openId: null };
 
 const $ = (sel) => document.querySelector(sel);
 const grid = $('#grid');
@@ -115,11 +125,14 @@ function cardMeta(item) {
 }
 
 function renderGrid() {
-  const items = state.items.filter(matchesFilter);
+  // Sorting is offered on the All tab; the other tabs stay A-Z.
+  const items = sortItems(state.items.filter(matchesFilter), state.filter === 'all' ? state.sort : 'title');
+  sortSelect.hidden = state.filter !== 'all';
   grid.innerHTML = items
     .map((item) => {
       // Release info only matters once you're caught up (Waiting) or done (Watched).
-      const release = item.type === 'tv' && ['waiting', 'watched'].includes(statusOf(item)) ? cardRelease(item.prediction) : null;
+      let release = item.type === 'tv' && ['waiting', 'watched'].includes(statusOf(item)) ? cardRelease(item.prediction) : null;
+      if (release && item.prediction.kind === 'ended' && progressSummary(item) === 'Finished') release = null; // card already says "Finished"
       return `
       <button class="card" data-id="${esc(item.id)}" title="${esc(item.title)}">
         <div class="poster">
@@ -140,6 +153,18 @@ function renderGrid() {
   else if (state.items.length > 0 && items.length === 0) $('#empty').textContent = 'Nothing matches this filter.';
   else $('#empty').textContent = 'Nothing here yet. Search for a movie or show above to add it.';
 }
+
+const sortSelect = $('#sort-select');
+sortSelect.value = state.sort;
+sortSelect.addEventListener('change', () => {
+  state.sort = sortSelect.value;
+  try {
+    localStorage.setItem('sort', state.sort);
+  } catch {
+    // Storage blocked (private window): the choice just isn't remembered.
+  }
+  renderGrid();
+});
 
 function setFilter(filter) {
   state.filter = filter;

@@ -108,6 +108,9 @@ main { padding: 16px 28px 48px; }
   font-size: 0.9rem;
 }
 .library-search:focus { border-color: #666; }
+.sort-select { margin-left: auto; min-width: 0; padding: 6px 8px; font-size: 0.9rem; }
+.sort-select:not([hidden]) + .library-search { margin-left: 0; }
+.sort-select[hidden] { display: none; }
 .chip {
   padding: 4px 0;
   border: none;
@@ -238,7 +241,8 @@ select {
   .chip.gap { margin-left: 6px; }
   .library-bar { flex-wrap: wrap; }
   .filters { order: 2; width: 100%; }
-  .library-search { order: 1; flex: 1; width: auto; margin-left: 0; }
+  .library-search { order: 1; flex: 1 1 0; min-width: 0; width: auto; margin-left: 0; }
+  .sort-select { order: 1; flex: none; margin-left: 0; }
   .sync-status { order: 1; }
   .card-meta { white-space: normal; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 18px 12px; }

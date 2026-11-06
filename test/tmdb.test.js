@@ -21,7 +21,7 @@ beforeEach(() => { process.env.TMDB_API_KEY = 'abc123'; });
 afterEach(() => { globalThis.fetch = realFetch; delete process.env.TMDB_API_KEY; });
 
 const show = {
-  id: 1, name: 'Weekly Show', first_air_date: '2024-10-01', poster_path: '/p.jpg', overview: '', status: 'Returning Series', in_production: true,
+  id: 1, name: 'Weekly Show', first_air_date: '2024-10-01', genres: [{ id: 18, name: 'Drama' }, { id: 35, name: 'Comedy' }], poster_path: '/p.jpg', overview: '', status: 'Returning Series', in_production: true,
   number_of_seasons: 2, number_of_episodes: 18, last_air_date: '2026-11-06',
   last_episode_to_air: { season_number: 2, episode_number: 6, air_date: '2026-11-06', name: 'Six' },
   next_episode_to_air: { season_number: 2, episode_number: 7, air_date: '2026-11-13', name: 'Seven' },
@@ -41,6 +41,8 @@ test('TV details include the release pattern of the airing season', async () => 
   assert.equal(d.cache.release.finale.episode, 10);
   assert.deepEqual(d.cache.seasons.map((s) => s.season), [1, 2], 'specials are left out');
   assert.equal(d.cache.nextEpisode.episode, 7);
+  assert.deepEqual(d.cache.genres, ['Drama', 'Comedy']);
+  assert.equal(d.cache.firstAirDate, '2024-10-01');
   assert.equal(requests[0].apiKey, 'abc123');
 });
 
