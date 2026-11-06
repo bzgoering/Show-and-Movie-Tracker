@@ -1,4 +1,4 @@
-import { airedSeasons, formatProgress, isCaughtUp, latestAired, nextEpisode, remainingCount, statusOf } from './progress.js';
+import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, remainingCount, statusOf } from './progress.js';
 
 const IMG = 'https://image.tmdb.org/t/p/';
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
@@ -111,7 +111,7 @@ function cardRelease(p) {
 function cardMeta(item) {
   if (item.type === 'movie') return item.year ? `Movie · ${item.year}` : 'Movie';
   if (item.label === 'planned') return 'TV';
-  const parts = [formatProgress(item.progress)];
+  const parts = [progressSummary(item)];
   const left = remainingCount(item);
   if (left > 0) parts.push(`${left} left`);
   return parts.join(' · ');
@@ -270,11 +270,15 @@ dialog.addEventListener('click', (e) => {
   if (e.target === dialog) dialog.close();
 });
 
-function episodeOptions(seasons, season, selected) {
+// Episode choices for one season. The newest season also gets a "Caught up" choice at the end.
+function episodeOptions(seasons, season, current, latest) {
   const count = seasons.find((s) => s.season === season)?.episodeCount || 0;
-  const opts = [`<option value="0"${selected === 0 ? ' selected' : ''}>—</option>`];
-  for (let ep = 1; ep <= Math.max(count, selected); ep++) {
-    opts.push(`<option value="${ep}"${ep === selected ? ' selected' : ''}>Episode ${ep}</option>`);
+  const opts = [];
+  for (let ep = 1; ep <= count; ep++) {
+    opts.push(`<option value="${ep}"${current && ep === current.episode ? ' selected' : ''}>Episode ${ep}</option>`);
+  }
+  if (latest && season === latest.season) {
+    opts.push(`<option value="done"${current ? '' : ' selected'}>✓ Caught up</option>`);
   }
   return opts.join('');
 }
@@ -334,12 +338,12 @@ function nextBox(p) {
 function tvSection(item) {
   const c = item.cache || {};
   const seasons = airedSeasons(c);
-  const p = item.progress || { season: 1, episode: 0 };
   const latest = latestAired(c);
-  const next = nextEpisode(p, seasons);
-  const caughtUp = isCaughtUp(p, c);
+  const current = currentEpisode(item);
+  const shownSeason = current ? current.season : latest?.season;
   const left = remainingCount(item);
   const pred = item.prediction || {};
+  const atLatest = current && latest && current.season === latest.season && current.episode === latest.episode;
 
   const seasonLabel = (s) =>
     s.totalEpisodes && s.totalEpisodes > s.episodeCount ? `${s.name} (${s.episodeCount} of ${s.totalEpisodes} out)` : `${s.name} (${s.episodeCount})`;
@@ -349,27 +353,27 @@ function tvSection(item) {
       <div class="row">
         <label>Season
           <select id="season-select">
-            ${seasons.map((s) => `<option value="${s.season}"${s.season === p.season ? ' selected' : ''}>${esc(seasonLabel(s))}</option>`).join('')}
+            ${seasons.map((s) => `<option value="${s.season}"${s.season === shownSeason ? ' selected' : ''}>${esc(seasonLabel(s))}</option>`).join('')}
           </select>
         </label>
-        <label>Episode
-          <select id="episode-select">${episodeOptions(seasons, p.season, p.episode)}</select>
+        <label>Episode you're on
+          <select id="episode-select">${episodeOptions(seasons, shownSeason, current, latest)}</select>
         </label>
       </div>
       <div class="row buttons">
         ${
-          next
-            ? `<button id="next-ep" class="primary">Mark S${next.season} E${next.episode} as watched</button>`
+          current
+            ? `<button id="next-ep" class="primary">Mark S${current.season} E${current.episode} as watched</button>`
             : `<span id="next-ep" class="caught-up">✓ Caught up${statusOf(item) === 'waiting' ? '<span class="muted small"> · shown under Waiting until new episodes come out</span>' : ''}</span>`
         }
-        ${latest && !caughtUp ? `<button id="latest-ep">Jump to latest (S${latest.season} E${latest.episode})</button>` : ''}
+        ${current && !atLatest ? `<button id="latest-ep">Jump to latest (S${latest.season} E${latest.episode})</button>` : ''}
       </div>`
     : '<p class="muted small">No episodes have aired yet.</p>';
 
   return `
     <section class="detail-section">
       <h3>Your progress</h3>
-      <p class="muted">Last watched: <strong>${esc(formatProgress(p))}</strong>${seasons.length ? (left > 0 ? ` · ${left} aired episode${left === 1 ? '' : 's'} left` : ' · All caught up') : ''}</p>
+      ${seasons.length ? `<p class="muted"><strong>${esc(progressSummary(item))}</strong>${left > 0 ? ` · ${left} aired episode${left === 1 ? '' : 's'} left, including this one` : ''}</p>` : ''}
       ${pickers}
     </section>
 
@@ -432,7 +436,7 @@ async function save(patch) {
 function setProgress(item, progress) {
   const patch = { progress };
   // Starting a planned show moves it to Watching automatically.
-  if (item.label === 'planned' && progress.episode > 0) patch.label = 'watching';
+  if (item.label === 'planned' && (progress.season > 1 || progress.episode > 0)) patch.label = 'watching';
   return save(patch);
 }
 
@@ -444,13 +448,13 @@ detailBody.addEventListener('click', async (e) => {
   if (labelBtn) return save({ label: labelBtn.dataset.label });
 
   if (e.target.id === 'next-ep') {
-    const next = nextEpisode(item.progress, airedSeasons(item.cache));
-    if (next) return setProgress(item, next);
+    const current = currentEpisode(item);
+    if (current) return setProgress(item, current); // finished this one, so it becomes the last watched
   }
 
   if (e.target.id === 'latest-ep') {
     const latest = latestAired(item.cache);
-    if (latest) return setProgress(item, latest);
+    if (latest) return setProgress(item, progressForCurrent(latest.season, latest.episode));
   }
 
   if (e.target.id === 'refresh-btn') {
@@ -485,13 +489,16 @@ detailBody.addEventListener('change', (e) => {
   if (!item) return;
 
   if (e.target.id === 'season-select') {
-    // Picking a season starts you at episode 1 of it, unless it's the season you're already on.
-    const season = Number(e.target.value);
-    const episode = season === item.progress.season ? item.progress.episode : 1;
-    return setProgress(item, { season, episode });
+    // Picking a season puts you on its first episode.
+    return setProgress(item, progressForCurrent(Number(e.target.value), 1));
   }
   if (e.target.id === 'episode-select') {
-    return setProgress(item, { season: item.progress.season, episode: Number(e.target.value) });
+    const season = Number($('#season-select').value);
+    if (e.target.value === 'done') {
+      const latest = latestAired(item.cache);
+      return setProgress(item, { season: latest.season, episode: latest.episode });
+    }
+    return setProgress(item, progressForCurrent(season, Number(e.target.value)));
   }
   if (e.target.id === 'ended-toggle') {
     return save({ userMarkedEnded: e.target.checked });

@@ -83,3 +83,27 @@ test('caught-up Watching shows with more coming show as Waiting', () => {
   assert.equal(statusOf(show({ season: 1, episode: 0 }, { kind: 'confirmed' }, 'planned')), 'planned');
   assert.equal(statusOf({ type: 'movie', label: 'watched' }), 'watched');
 });
+
+import { currentEpisode, progressForCurrent, progressSummary } from '../public/progress.js';
+
+test('the episode you are on is the one after your last watched', () => {
+  const show = (progress, prediction) => ({ type: 'tv', progress, cache: airing, prediction });
+  assert.deepEqual(currentEpisode(show({ season: 1, episode: 0 })), { season: 1, episode: 1 });
+  assert.deepEqual(currentEpisode(show({ season: 1, episode: 8 })), { season: 2, episode: 1 }, 'rolls into next season');
+  assert.deepEqual(currentEpisode(show({ season: 2, episode: 3 })), { season: 2, episode: 4 });
+  assert.equal(currentEpisode(show({ season: 2, episode: 4 })), null, 'caught up on the newest episode');
+
+  assert.equal(progressSummary(show({ season: 2, episode: 3 })), 'On S2 E4');
+  assert.equal(progressSummary(show({ season: 2, episode: 4 }, { kind: 'confirmed' })), 'Caught up');
+  assert.equal(progressSummary(show({ season: 2, episode: 4 }, { kind: 'ended' })), 'Finished');
+  assert.equal(progressSummary({ type: 'tv', progress: { season: 1, episode: 0 }, cache: { seasons: [] } }), 'Not out yet');
+});
+
+test('picking "I am on S2 E4" saves S2 E3 as last watched', () => {
+  assert.deepEqual(progressForCurrent(2, 4), { season: 2, episode: 3 });
+  // Being on episode 1 of a season means the earlier seasons are done.
+  const onSeason2 = progressForCurrent(2, 1);
+  assert.deepEqual(onSeason2, { season: 2, episode: 0 });
+  assert.deepEqual(currentEpisode({ progress: onSeason2, cache: airing }), { season: 2, episode: 1 });
+  assert.equal(remainingCount({ progress: onSeason2, cache: airing }), 4);
+});

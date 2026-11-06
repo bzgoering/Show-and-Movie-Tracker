@@ -35,8 +35,8 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 - Poster grid of everything you've added, with filters for Watching, Waiting, Planned, Watched, Movies and Shows
 - **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
-- Season and episode tracking for shows. You can only pick episodes that have already aired.
-- One-click buttons to mark the next episode watched, or jump straight to the newest episode
+- Season and episode tracking for shows: pick the episode you're on (only episodes that have aired are listed), or "Caught up"
+- One-click buttons to mark the episode you're on as watched, or jump straight to the newest episode
 - Shows how many aired episodes you have left
 - "What's next" for each show, labeled so it's clear what's coming:
   - **Next episode**: for weekly shows, the date of the next episode and when the season finale airs

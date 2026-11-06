@@ -70,3 +70,19 @@ export function statusOf(item) {
   }
   return item.label;
 }
+
+// The episode you're on: the first one you haven't watched yet, or null when you're caught up.
+// (The saved progress is the last episode you finished.)
+export function currentEpisode(item) {
+  return nextEpisode(item.progress || { season: 1, episode: 0 }, airedSeasons(item.cache));
+}
+
+// Saved progress for "I'm on this episode": everything before it counts as watched.
+export const progressForCurrent = (season, episode) => ({ season, episode: episode - 1 });
+
+export function progressSummary(item) {
+  const current = currentEpisode(item);
+  if (current) return `On S${current.season} E${current.episode}`;
+  if (!latestAired(item.cache)) return 'Not out yet';
+  return item.prediction?.kind === 'ended' ? 'Finished' : 'Caught up';
+}
