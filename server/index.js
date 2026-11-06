@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
+import { watchForCodeChanges } from './code-version.js';
 import { createStore } from './store.js';
 import { loadEnv } from './env.js';
 import * as tmdb from './tmdb.js';
@@ -14,7 +15,13 @@ const store = createStore(libraryFile);
 const result = await store.init();
 console.log(result === 'created' ? `Created an empty library at ${libraryFile}` : `Using library at ${libraryFile}`);
 
-const app = createApp({ store, tmdb, publicDir: path.join(root, 'public'), syncOnStart: true });
+const app = createApp({
+  store,
+  tmdb,
+  publicDir: path.join(root, 'public'),
+  syncOnStart: true,
+  isOutdated: watchForCodeChanges(root),
+});
 
 const server = app.listen(port, () => {
   console.log(`Show & Movie Tracker running at http://localhost:${port}`);

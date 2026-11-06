@@ -23,15 +23,23 @@ import {
 } from './score.js';
 import { isAnimatedItem, normalizeGenres, tasteProfile } from './taste.js';
 
+// TMDB answers are cached for a while. The promise itself is cached, so requests that arrive together
+// share one fetch; failures are dropped so they're retried; expired entries are swept as the cache grows.
 const cache = new Map();
-async function cached(key, ttlMs, fn) {
+const MAX_CACHE = 2000;
+const HOURS = 60 * 60 * 1000;
+
+function cached(key, ttlMs, fn) {
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return hit.value;
-  const value = await fn();
+  const value = fn();
   cache.set(key, { value, expires: Date.now() + ttlMs });
+  value.catch(() => cache.delete(key));
+  if (cache.size > MAX_CACHE) {
+    for (const [k, entry] of cache) if (entry.expires <= Date.now()) cache.delete(k);
+  }
   return value;
 }
-const HOURS = 60 * 60 * 1000;
 
 const keyOf = (c) => mediaKey(c.type, c.tmdbId);
 

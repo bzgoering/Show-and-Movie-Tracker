@@ -161,3 +161,17 @@ test('settings default to WATCH_REGION and are validated', () => {
   assert.throws(() => applySettingsPatch({}, { region: 'usa' }), /two-letter/);
   assert.throws(() => applySettingsPatch({}, { services: 'netflix' }), /list of provider ids/);
 });
+
+test('notices when server code changes after starting', async () => {
+  const { watchForCodeChanges } = await import('../server/code-version.js');
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-code-'));
+  await fs.mkdir(path.join(root, 'server', 'routes'), { recursive: true });
+  const file = path.join(root, 'server', 'routes', 'a.js');
+  await fs.writeFile(file, '// v1');
+  const past = new Date(Date.now() - 60_000);
+  await fs.utimes(file, past, past);
+  const isOutdated = watchForCodeChanges(root, ['server']);
+  assert.equal(isOutdated(), false);
+  await fs.writeFile(file, '// v2'); // e.g. git pull
+  assert.equal(isOutdated(), true);
+});

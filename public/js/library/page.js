@@ -132,9 +132,12 @@ export async function loadLibrary() {
   el.sync.textContent = 'Updating…';
   el.grid.classList.add('loading');
   try {
-    const sync = await library.load();
+    const { sync, restartNeeded } = await library.load();
     showMessage('');
     showSync(sync);
+    if (restartNeeded) {
+      showMessage('This app was updated. Restart it to finish: press Ctrl+C in its window, then run npm start.');
+    }
   } catch (err) {
     el.sync.textContent = '';
     showMessage(`Could not load your library: ${err.message}`);

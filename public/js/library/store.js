@@ -21,12 +21,13 @@ export const library = {
   find: (id) => items.find((item) => item.id === id),
   onChange: (handler) => events.addEventListener('change', (e) => handler(e.detail)),
 
-  // Loads the library (the server refreshes it from TMDB first). Returns the refresh summary.
+  // Loads the library (the server refreshes it from TMDB first). Returns the refresh summary, and
+  // whether the server needs restarting to pick up an update.
   async load() {
-    const { items: loaded, sync } = await api('/api/library');
+    const { items: loaded, sync, restartNeeded } = await api('/api/library');
     items.splice(0, items.length, ...loaded);
     emit('load');
-    return sync;
+    return { sync, restartNeeded };
   },
 
   // body: { type, tmdbId, label?, from? }

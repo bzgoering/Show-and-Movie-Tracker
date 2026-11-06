@@ -20,7 +20,8 @@ function startupRefresh(sync, enabled) {
   };
 }
 
-export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
+// isOutdated() says whether the server's code changed on disk since it started (see code-version.js).
+export function createApp({ store, tmdb, publicDir, syncOnStart = false, isOutdated = () => false }) {
   const sync = createLibrarySync({ store, tmdb });
   const startupSync = startupRefresh(sync, syncOnStart);
 
@@ -28,7 +29,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
   app.use(express.json());
   if (publicDir) app.use(express.static(publicDir));
 
-  app.use('/api', libraryRoutes({ store, tmdb, sync, startupSync }));
+  app.use('/api', libraryRoutes({ store, tmdb, sync, startupSync, isOutdated }));
   app.use('/api', settingsRoutes({ store, tmdb }));
   app.use('/api', exploreRoutes({ store, tmdb }));
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));

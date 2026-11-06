@@ -6,7 +6,7 @@ import { asyncRoute, HttpError, parseMediaRef } from '../http.js';
 import { applyChanges, needsProviders, newItem, withPrediction } from '../library/items.js';
 import { settingsOf } from '../settings.js';
 
-export function libraryRoutes({ store, tmdb, sync, startupSync }) {
+export function libraryRoutes({ store, tmdb, sync, startupSync, isOutdated }) {
   const router = Router();
   const findItem = async (id) => (await store.read()).items.find((i) => i.id === id);
 
@@ -29,7 +29,7 @@ export function libraryRoutes({ store, tmdb, sync, startupSync }) {
       if (!(await startupSync.wait())) await sync.refreshStale();
       await sync.ensureProviders();
       const data = await store.read();
-      res.json({ items: data.items.map(withPrediction), sync: sync.lastSync() });
+      res.json({ items: data.items.map(withPrediction), sync: sync.lastSync(), restartNeeded: isOutdated() });
     }),
   );
 
