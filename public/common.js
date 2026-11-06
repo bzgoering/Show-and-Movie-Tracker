@@ -66,3 +66,27 @@ export function whereToWatch(providers, region) {
       ${w.link ? `<p class="small"><a href="${esc(w.link)}" target="_blank" rel="noopener">See all options</a></p>` : ''}
     </section>`;
 }
+
+// ---------- Images that fail to load ----------
+// If TMDB can't serve an image (removed poster, slow connection), replace the browser's
+// broken-image icon with something that keeps the layout: the title for posters, a grey
+// box for small thumbnails, and the service name for logos.
+document.addEventListener(
+  'error',
+  (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    const posterBox = img.closest('.poster');
+    if (posterBox) {
+      const title = img.closest('.card')?.querySelector('.card-title')?.textContent || '';
+      posterBox.innerHTML = `<div class="no-poster">${esc(title)}</div>`;
+    } else if (img.closest('.result, .hidden-list')) {
+      img.replaceWith(Object.assign(document.createElement('span'), { className: 'thumb-empty' }));
+    } else if (img.alt) {
+      img.replaceWith(Object.assign(document.createElement('span'), { textContent: img.alt }));
+    } else {
+      img.remove();
+    }
+  },
+  true, // image errors don't bubble, so listen while the event travels down
+);

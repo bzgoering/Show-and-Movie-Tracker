@@ -24,6 +24,7 @@ body {
 }
 
 button, input, select { font: inherit; color: inherit; }
+img { max-width: 100%; }
 button { cursor: pointer; }
 button:disabled { cursor: default; opacity: 0.5; }
 
@@ -135,6 +136,9 @@ main { padding: 16px 28px 48px; }
 .card {
   display: block;
   align-self: start;
+  /* Buttons size to their content by default, so a long title would stretch the card
+     (and its poster) wider than the column. Always fill the column instead. */
+  width: 100%;
   min-width: 0;
   padding: 0;
   border: none;
@@ -371,7 +375,10 @@ select {
 .attribution { margin-top: 32px; color: var(--muted); font-size: 0.75rem; text-align: center; }
 
 @media (max-width: 600px) {
-
+  .card-providers { gap: 3px; }
+  .card-providers img { width: 18px; height: 18px; border-radius: 4px; }
+  .label-picker { display: flex; width: 100%; }
+  .label-btn { flex: 1; padding: 5px 6px; }
   .view-tab { flex: 1; }
   .services-btn { flex: 1; }
 }
