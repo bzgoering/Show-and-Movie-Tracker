@@ -1,4 +1,5 @@
 import { $, api, esc, poster, providerStrip, whereToWatch } from './common.js';
+import { readRoute, setSubTab } from './route.js';
 import './explore-page.js';
 import { hasGenre, libraryGenres, sortItems } from './sort.js';
 import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
@@ -16,7 +17,10 @@ function savedSort() {
   }
 }
 
-const state = { items: [], filter: 'all', query: '', sort: savedSort(), genre: '', openId: null };
+const LIBRARY_TABS = ['all', 'watching', 'waiting', 'planned', 'watched', 'movie', 'tv'];
+const startTab = readRoute().view === 'library' && LIBRARY_TABS.includes(readRoute().sub) ? readRoute().sub : 'all';
+
+const state = { items: [], filter: startTab, query: '', sort: savedSort(), genre: '', openId: null };
 
 const grid = $('#grid');
 const searchInput = $('#search-input');
@@ -185,10 +189,24 @@ sortSelect.addEventListener('change', () => {
   renderGrid();
 });
 
+const libraryChips = () => document.querySelectorAll('#library-view .filters .chip');
+
 function setFilter(filter) {
   state.filter = filter;
-  document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === filter));
+  libraryChips().forEach((c) => c.classList.toggle('active', c.dataset.filter === filter));
+  setSubTab('library', filter);
 }
+
+// Coming back to the Library (Back button, or a link) reopens the tab in the address.
+window.addEventListener('hashchange', () => {
+  const { view, sub } = readRoute();
+  if (view !== 'library') return;
+  const tab = LIBRARY_TABS.includes(sub) ? sub : 'all';
+  if (tab !== state.filter) {
+    setFilter(tab);
+    renderGrid();
+  }
+});
 
 // Library search looks through everything, so it switches to the All tab.
 const librarySearch = $('#library-search');
@@ -208,8 +226,7 @@ librarySearch.addEventListener('keydown', (e) => {
 document.querySelector('.filters').addEventListener('click', (e) => {
   const chip = e.target.closest('.chip');
   if (!chip) return;
-  state.filter = chip.dataset.filter;
-  document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === chip));
+  setFilter(chip.dataset.filter);
   renderGrid();
 });
 

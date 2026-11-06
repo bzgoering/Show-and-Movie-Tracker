@@ -86,6 +86,24 @@
     <div id="detail-body"></div>
   </dialog>
 
+  <script>
+    // Open the page and tab from the address before anything is drawn, so a refresh
+    // doesn't flash the Library first. (The full app takes over a moment later.)
+    (function () {
+      var parts = location.hash.slice(1).split('/');
+      var view = parts[0] === 'explore' ? 'explore' : 'library';
+      var sub = parts[1] || 'all';
+      document.getElementById('library-view').hidden = view !== 'library';
+      document.getElementById('explore-view').hidden = view !== 'explore';
+      document.querySelectorAll('.view-tab').forEach(function (t) {
+        t.classList.toggle('active', t.getAttribute('data-view') === view);
+      });
+      var chips = document.querySelectorAll(view === 'explore' ? '.explore-types .chip' : '#library-view .filters .chip');
+      var key = view === 'explore' ? 'data-type' : 'data-filter';
+      var match = Array.prototype.some.call(chips, function (c) { return c.getAttribute(key) === sub; });
+      if (match) chips.forEach(function (c) { c.classList.toggle('active', c.getAttribute(key) === sub); });
+    })();
+  </script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

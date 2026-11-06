@@ -1,5 +1,6 @@
 // The Explore page: suggestions based on your library, filtered to your streaming services.
 import { $, api, esc, logo, poster, providerStrip, whereToWatch } from './common.js';
+import { goToView, readRoute, setSubTab } from './route.js';
 
 const ex = {
   type: 'all',
@@ -31,24 +32,26 @@ function showExploreMessage(text) {
 
 // ---------- Switching between Library and Explore ----------
 
-// The page you're on is kept in the address (#library or #explore), so refreshing
-// stays on it and the back button moves between them.
-const viewFromHash = () => (location.hash === '#explore' ? 'explore' : 'library');
+// The page and tab you're on are kept in the address (see route.js).
+const EXPLORE_TABS = ['all', 'movie', 'tv-live', 'tv-animated'];
 
 function showView(view) {
   for (const [name, el] of Object.entries(views)) el.hidden = name !== view;
   document.querySelectorAll('.view-tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
-  if (view === 'explore') openExplore();
+  if (view === 'explore') {
+    const { sub } = readRoute();
+    setExploreType(EXPLORE_TABS.includes(sub) ? sub : 'all');
+    openExplore();
+  }
 }
 
 document.querySelector('.views').addEventListener('click', (e) => {
   const tab = e.target.closest('.view-tab');
-  if (!tab) return;
-  if (viewFromHash() === tab.dataset.view) return;
-  location.hash = tab.dataset.view; // triggers hashchange below
+  if (!tab || readRoute().view === tab.dataset.view) return;
+  goToView(tab.dataset.view);
 });
 
-window.addEventListener('hashchange', () => showView(viewFromHash()));
+window.addEventListener('hashchange', () => showView(readRoute().view));
 
 // Your library changed (added, removed, relabeled): recompute suggestions the next time they're opened.
 document.addEventListener('library:changed', () => {
@@ -121,11 +124,16 @@ function renderResults() {
     : 'No suggestions yet. Add a few movies or shows to your library first.';
 }
 
+function setExploreType(type) {
+  ex.type = type;
+  document.querySelectorAll('.explore-types .chip').forEach((c) => c.classList.toggle('active', c.dataset.type === type));
+}
+
 document.querySelector('.explore-types').addEventListener('click', (e) => {
   const chip = e.target.closest('.chip');
   if (!chip) return;
-  ex.type = chip.dataset.type;
-  document.querySelectorAll('.explore-types .chip').forEach((c) => c.classList.toggle('active', c === chip));
+  setExploreType(chip.dataset.type);
+  setSubTab('explore', ex.type);
   dropIfStale();
   loadResults();
 });
@@ -386,4 +394,4 @@ $('#region-select').addEventListener('change', async (e) => {
 });
 
 // Open whichever page the address points to (e.g. after a refresh).
-showView(viewFromHash());
+showView(readRoute().view);
