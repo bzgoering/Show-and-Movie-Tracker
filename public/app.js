@@ -1,4 +1,4 @@
-import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, remainingCount, statusOf } from './progress.js';
+import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
 
 const IMG = 'https://image.tmdb.org/t/p/';
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
@@ -111,10 +111,7 @@ function cardRelease(p) {
 function cardMeta(item) {
   if (item.type === 'movie') return item.year ? `Movie · ${item.year}` : 'Movie';
   if (item.label === 'planned') return 'TV';
-  const parts = [progressSummary(item)];
-  const left = remainingCount(item);
-  if (left > 0) parts.push(`${left} left`);
-  return parts.join(' · ');
+  return progressSummary(item);
 }
 
 function renderGrid() {
@@ -341,7 +338,6 @@ function tvSection(item) {
   const latest = latestAired(c);
   const current = currentEpisode(item);
   const shownSeason = current ? current.season : latest?.season;
-  const left = remainingCount(item);
   const pred = item.prediction || {};
   const atLatest = current && latest && current.season === latest.season && current.episode === latest.episode;
   const ended = pred.kind === 'ended';
@@ -380,7 +376,7 @@ function tvSection(item) {
   return `
     <section class="detail-section">
       <h3>Your progress</h3>
-      ${seasons.length ? `<p class="muted"><strong>${esc(progressSummary(item))}</strong>${left > 0 ? ` · ${left} aired episode${left === 1 ? '' : 's'} left, including this one` : ''}</p>` : ''}
+      ${seasons.length ? `<p class="muted"><strong>${esc(progressSummary(item))}</strong></p>` : ''}
       ${pickers}
     </section>
 
