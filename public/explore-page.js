@@ -1,5 +1,5 @@
 // The Explore page: suggestions based on your library, filtered to your streaming services.
-import { $, api, esc, poster } from './common.js';
+import { $, api, esc, logo, poster, providerStrip, whereToWatch } from './common.js';
 
 const ex = {
   type: 'all',
@@ -22,7 +22,6 @@ const dialog = $('#detail');
 const detailBody = $('#detail-body');
 
 const keyOf = (c) => `${c.type}-${c.tmdbId}`;
-const logo = (path) => (path ? `https://image.tmdb.org/t/p/w92${path}` : '');
 
 function showExploreMessage(text) {
   const el = $('#explore-message');
@@ -99,25 +98,6 @@ async function loadResults() {
   if (type === ex.type) renderResults();
 }
 
-function providerStrip(c) {
-  const stream = c.providers?.stream || [];
-  if (stream.length === 1) {
-    const p = stream[0];
-    return `${p.logoPath ? `<img src="${logo(p.logoPath)}" alt="">` : ''}<span>${esc(p.name)}</span>`;
-  }
-  if (stream.length) {
-    const shown = stream.slice(0, 4);
-    const more = stream.length - shown.length;
-    return (
-      shown
-        .map((p) => (p.logoPath ? `<img src="${logo(p.logoPath)}" alt="${esc(p.name)}" title="${esc(p.name)}">` : `<span>${esc(p.name)}</span>`))
-        .join('') + (more > 0 ? `<span class="more">+${more}</span>` : '')
-    );
-  }
-  if (c.providers?.rent?.length || c.providers?.buy?.length) return '<span class="muted">Rent or buy</span>';
-  return '<span class="muted">Not streaming in your country</span>';
-}
-
 function renderResults() {
   const items = ex.results.get(ex.type) || [];
   exploreGrid.innerHTML = items
@@ -128,7 +108,7 @@ function renderResults() {
           <div class="poster"><img src="${poster(c.posterPath)}" alt="" loading="lazy"></div>
           <div class="card-title">${esc(c.title)}</div>
           <div class="card-meta"><span class="match">${c.match}% match</span> · ${c.type === 'tv' ? 'TV' : 'Movie'}${c.year ? ` · ${c.year}` : ''}</div>
-          <div class="card-providers">${providerStrip(c)}</div>
+          <div class="card-providers">${providerStrip(c.providers)}</div>
         </button>
         ${c.added ? '' : `<button class="dismiss" data-key="${esc(keyOf(c))}" title="Not interested" aria-label="Not interested in ${esc(c.title)}">✕</button>`}
       </div>`,
@@ -255,23 +235,10 @@ function findSuggestion(key) {
   return null;
 }
 
-function providerChips(list) {
-  return list
-    .map((p) => `<span class="provider">${p.logoPath ? `<img src="${logo(p.logoPath)}" alt="">` : ''}${esc(p.name)}</span>`)
-    .join('');
-}
-
 function openSuggestion(key) {
   const c = findSuggestion(key);
   if (!c) return;
   ex.openKey = key;
-  const w = c.providers || { stream: [], rent: [], buy: [] };
-  const where = [
-    w.stream.length ? `<p class="where-label">Stream</p><div class="providers">${providerChips(w.stream)}</div>` : '',
-    w.rent.length ? `<p class="where-label">Rent</p><div class="providers">${providerChips(w.rent)}</div>` : '',
-    w.buy.length ? `<p class="where-label">Buy</p><div class="providers">${providerChips(w.buy)}</div>` : '',
-  ].join('');
-
   detailBody.innerHTML = `
     <div class="detail-head">
       <img class="detail-poster" src="${poster(c.posterPath)}" alt="">
@@ -289,11 +256,7 @@ function openSuggestion(key) {
         ${c.overview ? `<p class="overview">${esc(c.overview)}</p>` : ''}
       </div>
     </div>
-    <section class="detail-section">
-      <h3>Where to watch in ${esc(ex.settings?.region || '')}</h3>
-      ${where || '<p class="muted">Not available to stream, rent or buy in your country right now.</p>'}
-      ${w.link ? `<p class="small"><a href="${esc(w.link)}" target="_blank" rel="noopener">See all options</a></p>` : ''}
-    </section>`;
+    ${whereToWatch(c.providers, ex.settings?.region)}`;
   if (!dialog.open) dialog.showModal();
 }
 
@@ -417,6 +380,7 @@ $('#services-clear').addEventListener('click', () => {
 $('#region-select').addEventListener('change', async (e) => {
   // Services differ by country, so start fresh in the new one.
   await saveSettings({ region: e.target.value, services: [] });
+  document.dispatchEvent(new CustomEvent('library:reload')); // Planned titles' streaming info is per country
   ex.providers = [];
   loadServices();
 });

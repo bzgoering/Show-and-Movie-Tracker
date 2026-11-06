@@ -46,6 +46,7 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
   - **Next season**: the premiere date, and whether the whole season drops at once or comes out weekly
   - **Next season (estimate)**: if nothing is announced, a guess based on how far apart past seasons came out
   - **Series ended**: when the show is over (you can also mark a show as ended yourself)
+- **Planned** titles show where you can watch them (streaming services on the card, plus stream/rent/buy options in the details), for the country set in Explore
 - Every time the app starts, it updates all your saved titles from TMDB first, so you never see old info. If TMDB can't be reached, it shows your saved info instead.
 
 ## Explore

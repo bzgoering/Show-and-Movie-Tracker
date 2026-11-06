@@ -204,3 +204,31 @@ test('not interested: hide, list, undo, and adding from Explore records feedback
   assert.ok(saved.dislikes.some((d) => d.tmdbId === 1));
   assert.ok(saved.feedback.at(-1).parts, 'signals recorded with the feedback');
 });
+
+test('planned titles get where-to-watch info for your country', async () => {
+  await call('DELETE', '/api/library/tmdb-movie-27205');
+  const added = await call('POST', '/api/library', { type: 'movie', tmdbId: 27205 });
+  assert.equal(added.body.label, 'planned');
+  assert.equal(added.body.cache.providers.region, 'US');
+  assert.deepEqual(added.body.cache.providers.rent.map((p) => p.name), ['Apple TV']);
+
+  // Changing country: the next library load looks it up again for the new one.
+  await call('PUT', '/api/settings', { region: 'CA' });
+  process.env.TMDB_API_KEY = 'test';
+  try {
+    const { body } = await call('GET', '/api/library');
+    const movie = body.items.find((i) => i.id === 'tmdb-movie-27205');
+    assert.equal(movie.cache.providers.region, 'CA');
+    assert.deepEqual(movie.cache.providers.stream, []);
+    assert.ok(body.items.filter((i) => i.label !== 'planned').every((i) => !i.cache?.providers || i.cache.providers.region !== 'CA'), 'only planned titles are looked up');
+  } finally {
+    delete process.env.TMDB_API_KEY;
+    await call('PUT', '/api/settings', { region: 'US' });
+  }
+
+  // Relabeling to Planned looks it up too.
+  const watched = await call('PATCH', '/api/library/tmdb-tv-1396', { label: 'watched' });
+  const replanned = await call('PATCH', '/api/library/tmdb-tv-1396', { label: 'planned' });
+  assert.equal(watched.status, 200);
+  assert.equal(replanned.body.cache.providers.region, 'US');
+});

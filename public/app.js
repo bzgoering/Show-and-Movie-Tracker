@@ -1,4 +1,4 @@
-import { $, api, esc, poster } from './common.js';
+import { $, api, esc, poster, providerStrip, whereToWatch } from './common.js';
 import './explore-page.js';
 import { hasGenre, libraryGenres, sortItems } from './sort.js';
 import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
@@ -36,6 +36,8 @@ function upsert(item) {
   else state.items[i] = item;
   document.dispatchEvent(new CustomEvent('library:changed'));
 }
+
+document.addEventListener('library:reload', () => load());
 
 // Titles added from the Explore page.
 document.addEventListener('library:added', (e) => {
@@ -137,6 +139,10 @@ function renderGrid() {
           release
             ? `<div class="card-next${release.soon ? ' soon' : ''}">${release.tag ? `<span class="next-tag">${esc(release.tag)}</span> ` : ''}${esc(release.text)}</div>`
             : ''
+        }
+        ${
+          // Planned titles show where you can watch them, like Explore does.
+          statusOf(item) === 'planned' && item.cache?.providers ? `<div class="card-providers">${providerStrip(item.cache.providers)}</div>` : ''
         }
       </button>`;
     })
@@ -455,6 +461,7 @@ function renderDetail() {
         ${item.overview ? `<p class="overview">${esc(item.overview)}</p>` : ''}
       </div>
     </div>
+    ${statusOf(item) === 'planned' && item.cache?.providers ? whereToWatch(item.cache.providers, item.cache.providers.region) : ''}
     ${item.type === 'tv' ? tvSection(item) : ''}
     <div class="detail-actions">
       <button id="refresh-btn">Refresh info</button>

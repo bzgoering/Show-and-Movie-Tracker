@@ -41,7 +41,36 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
 
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 
-  async function refreshItem(item) {
+  const defaultRegion = () => (process.env.WATCH_REGION || 'US').toUpperCase();
+  const settingsOf = (data) => ({ region: defaultRegion(), services: [], ...(data.settings || {}) });
+
+  // Where a Planned title is streaming, in your country. Saved with the title's info.
+  const needsProviders = (item, region) => item.label === 'planned' && item.cache?.providers?.region !== region;
+  async function attachProviders(item, region) {
+    try {
+      const w = await tmdb.watchProviders(item.type, item.tmdbId, region);
+      item.cache = { ...item.cache, providers: { region, ...w } };
+    } catch {
+      // Not critical: the card just won't show services until the next refresh.
+    }
+  }
+
+  // Fills in streaming info for Planned titles that don't have it for your country yet.
+  async function ensureProviders() {
+    if (!process.env.TMDB_API_KEY) return;
+    const data = await store.read();
+    const region = settingsOf(data).region;
+    if (!data.items.some((i) => needsProviders(i, region))) return;
+    await store.update(async (d) => {
+      const queue = d.items.filter((i) => needsProviders(i, region));
+      const worker = async () => {
+        for (let item = queue.shift(); item; item = queue.shift()) await attachProviders(item, region);
+      };
+      await Promise.all(Array.from({ length: REFRESH_CONCURRENCY }, worker));
+    });
+  }
+
+  async function refreshItem(item, region) {
     const details = await tmdb.getDetails(item.type, item.tmdbId);
 
     // A finished show came back (renewed, revived, rebranded): un-finish it so it shows up
@@ -61,6 +90,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
       cache: details.cache,
       updatedAt: new Date().toISOString(),
     });
+    if (item.label === 'planned' && region) await attachProviders(item, region);
   }
 
   app.get('/api/search', wrap(async (req, res) => {
@@ -82,11 +112,12 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
     let updated = 0;
     const errors = [];
     await store.update(async (data) => {
+      const region = settingsOf(data).region;
       const queue = data.items.filter((i) => !onlyStale || isStale(i));
       async function worker() {
         for (let item = queue.shift(); item; item = queue.shift()) {
           try {
-            await refreshItem(item);
+            await refreshItem(item, region);
             updated++;
           } catch (err) {
             errors.push(err.message);
@@ -114,6 +145,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
     } else if (process.env.TMDB_API_KEY && (await store.read()).items.some(isStale)) {
       await refreshAll({ onlyStale: true });
     }
+    await ensureProviders();
     const data = await store.read();
     res.json({ items: data.items.map(withPrediction), sync: lastSync });
   }));
@@ -128,7 +160,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
     const fromExplore = req.body.from === 'explore';
     const details = await tmdb.getDetails(type, id);
 
-    const item = await store.update((data) => {
+    const item = await store.update(async (data) => {
       const existing = data.items.find((i) => i.id === itemId(type, id));
       if (existing) return existing;
       const now = new Date().toISOString();
@@ -150,6 +182,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
         created.addedFrom = 'explore';
         recordFeedback(data, type, id, 'added');
       }
+      if (created.label === 'planned') await attachProviders(created, settingsOf(data).region);
       // Adding something you'd hidden means you're interested after all.
       if (data.dislikes) data.dislikes = data.dislikes.filter((d) => !(d.type === type && d.tmdbId === id));
       data.items.unshift(created);
@@ -160,7 +193,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
 
   app.patch('/api/library/:id', wrap(async (req, res) => {
     const body = req.body || {};
-    const item = await store.update((data) => {
+    const item = await store.update(async (data) => {
       const found = data.items.find((i) => i.id === req.params.id);
       if (!found) throw new HttpError(404, 'Item not in library.');
 
@@ -188,6 +221,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
       }
 
       found.updatedAt = new Date().toISOString();
+      if (needsProviders(found, settingsOf(data).region)) await attachProviders(found, settingsOf(data).region);
       return found;
     });
     res.json(withPrediction(item));
@@ -206,7 +240,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
     const item = await store.update(async (data) => {
       const found = data.items.find((i) => i.id === req.params.id);
       if (!found) throw new HttpError(404, 'Item not in library.');
-      await refreshItem(found);
+      await refreshItem(found, settingsOf(data).region);
       return found;
     });
     res.json(withPrediction(item));
@@ -214,8 +248,6 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
 
   // ---------- Explore ----------
 
-  const defaultRegion = () => (process.env.WATCH_REGION || 'US').toUpperCase();
-  const settingsOf = (data) => ({ region: defaultRegion(), services: [], ...(data.settings || {}) });
 
   app.get('/api/settings', wrap(async (req, res) => {
     res.json(settingsOf(await store.read()));
