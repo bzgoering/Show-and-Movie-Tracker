@@ -257,8 +257,10 @@ function openSuggestion(key) {
         <div class="row buttons">
           ${
             c.added
-              ? '<span class="caught-up">✓ In your library</span>'
-              : '<button id="explore-add" class="primary">Add to library</button><button id="explore-dislike" class="secondary">Not interested</button>'
+              ? `<span class="caught-up">✓ In your library as ${c.added === 'watched' ? 'Watched' : 'Planned'}</span>`
+              : `<button class="primary explore-add" data-label="planned">Add to Planned</button>
+                 <button class="secondary explore-add" data-label="watched">Watched</button>
+                 <button id="explore-dislike" class="secondary">Not interested</button>`
           }
         </div>
         ${c.overview ? `<p class="overview">${esc(c.overview)}</p>` : ''}
@@ -281,21 +283,24 @@ detailBody.addEventListener('click', async (e) => {
     return unhide(unhideBtn.dataset.key);
   }
   if (e.target.id === 'explore-dislike' && ex.openKey) return notInterested(ex.openKey);
-  if (e.target.id !== 'explore-add' || !ex.openKey) return;
+  const addBtn = e.target.closest('.explore-add');
+  if (!addBtn || !ex.openKey) return;
   const c = findSuggestion(ex.openKey);
-  e.target.disabled = true;
-  e.target.textContent = 'Adding…';
+  const label = addBtn.dataset.label; // 'planned' or 'watched'
+  const original = addBtn.textContent;
+  detailBody.querySelectorAll('.explore-add, #explore-dislike').forEach((b) => (b.disabled = true));
+  addBtn.textContent = 'Adding…';
   try {
-    const item = await api('/api/library', { method: 'POST', body: { type: c.type, tmdbId: c.tmdbId, from: 'explore' } });
+    const item = await api('/api/library', { method: 'POST', body: { type: c.type, tmdbId: c.tmdbId, from: 'explore', label } });
     document.dispatchEvent(new CustomEvent('library:added', { detail: item }));
-    c.added = true;
+    c.added = label;
     if (ex.stats) ex.stats.added++;
     openSuggestion(ex.openKey);
     renderResults();
     renderStats();
   } catch (err) {
-    e.target.disabled = false;
-    e.target.textContent = 'Add to library';
+    detailBody.querySelectorAll('.explore-add, #explore-dislike').forEach((b) => (b.disabled = false));
+    addBtn.textContent = original;
     showExploreMessage(err.message);
   }
 });

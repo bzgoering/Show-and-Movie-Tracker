@@ -21,9 +21,9 @@ const itemId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;
 
 // Remembers what you did with an Explore suggestion and what its score was based on,
 // so Explore can learn which signals match your taste (see learnWeights in explore.js).
-function recordFeedback(data, type, tmdbId, action) {
+function recordFeedback(data, type, tmdbId, action, extra = {}) {
   const s = recentSuggestion(`${type}-${tmdbId}`);
-  data.feedback = [...(data.feedback || []), { key: `${type}-${tmdbId}`, action, match: s?.match ?? null, parts: s?.parts ?? null, at: new Date().toISOString() }].slice(-500);
+  data.feedback = [...(data.feedback || []), { key: `${type}-${tmdbId}`, action, match: s?.match ?? null, parts: s?.parts ?? null, ...extra, at: new Date().toISOString() }].slice(-500);
 }
 
 function withPrediction(item) {
@@ -172,14 +172,21 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
         posterPath: details.posterPath,
         overview: details.overview,
         label,
-        ...(type === 'tv' ? { progress: { season: 1, episode: 0 }, userMarkedEnded: false } : {}),
+        // A show added as already watched is caught up to the newest episode.
+        ...(type === 'tv'
+          ? {
+              progress: label === 'watched' && details.cache.lastEpisode ? { season: details.cache.lastEpisode.season, episode: details.cache.lastEpisode.episode } : { season: 1, episode: 0 },
+              userMarkedEnded: false,
+            }
+          : {}),
         cache: details.cache,
         addedAt: now,
         updatedAt: now,
       };
       if (fromExplore) {
         created.addedFrom = 'explore';
-        recordFeedback(data, type, id, 'added');
+        // Adding it to watch later or saying you've already watched it both mean it was a good suggestion.
+        recordFeedback(data, type, id, 'added', { label });
       }
       if (created.label === 'planned') await attachProviders(created, settingsOf(data).region);
       // Adding something you'd hidden means you're interested after all.

@@ -239,3 +239,25 @@ test('explore accepts the show tabs and ignores unknown types', async () => {
   assert.ok(toons.body.items.every((i) => i.type === 'tv'));
   assert.equal((await call('GET', '/api/explore?type=toString')).status, 200, 'falls back to All instead of crashing');
 });
+
+test('adding from Explore as Watched marks a show caught up and counts as a good pick', async () => {
+  const f = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-watched-')), 'library.json');
+  const store = createStore(f);
+  await store.init();
+  const s = createApp({ store, tmdb: fakeTmdb }).listen(0);
+  await new Promise((r) => s.once('listening', r));
+  const post = (body) => fetch(`http://localhost:${s.address().port}/api/library`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
+  try {
+    const show = await post({ type: 'tv', tmdbId: 1396, from: 'explore', label: 'watched' });
+    assert.equal(show.label, 'watched');
+    assert.deepEqual(show.progress, { season: 5, episode: 16 }, 'caught up to the newest episode');
+    const movie = await post({ type: 'movie', tmdbId: 27205, from: 'explore', label: 'watched' });
+    assert.equal(movie.label, 'watched');
+    const planned = await post({ type: 'tv', tmdbId: 100088, from: 'explore' });
+    assert.deepEqual(planned.progress, { season: 1, episode: 0 }, 'planned shows start at the beginning');
+    const saved = JSON.parse(await fs.readFile(f, 'utf8'));
+    assert.deepEqual(saved.feedback.map((x) => `${x.action}:${x.label}`), ['added:watched', 'added:watched', 'added:planned']);
+  } finally {
+    s.close();
+  }
+});

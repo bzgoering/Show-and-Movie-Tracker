@@ -56,7 +56,7 @@ The **Explore** tab suggests movies and shows you'll probably like, best match f
 - Tabs for **All**, **Movies**, **Live-action shows** and **Anime & cartoons** (shows TMDB tags as Animation)
 - Click **Streaming** to pick the services you have, and Explore will only suggest titles on them. Your picks and country are saved in `data/library.json`.
 - Set your country with the Country picker (or `WATCH_REGION` in `.env`, default `US`)
-- Add a suggestion to your library straight from its details
+- Add a suggestion straight from its details: **Add to Planned** to watch later, or **Watched** if you've already seen it (shows are marked caught up)
 - Not interested in something? Click the ✕ on its poster (or **Not interested** in its details). It's hidden for good, and Explore suggests a little less like it. Undo right away, or bring titles back from the **hidden** list.
 
 **How Explore learns.** Your library is the main signal. Hidden titles act as a counterweight, not a veto: a genre only counts against a suggestion as far as you hide it more than you watch it, and titles similar to ones you hid get a small penalty. Every add and hide from Explore is saved with what the score was based on. Once you've added at least 3 suggestions and hidden at least 2, Explore compares the two groups and shifts weight toward the signals that predicted your adds (each by at most half). The line above the suggestions shows your picks and hit rate, and says "tuned to your picks" once this is active.
