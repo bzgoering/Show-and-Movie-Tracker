@@ -31,7 +31,8 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 
 ## Features
 - Search for any movie or TV show and add it with one click
-- Poster grid of everything you've added, with filters for Watching, Planned, Watched, Movies and Shows
+- Poster grid of everything you've added, with filters for Watching, Waiting, Planned, Watched, Movies and Shows
+- **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
 - Season and episode tracking for shows. You can only pick episodes that have already aired.
 - One-click buttons to mark the next episode watched, or jump straight to the newest episode

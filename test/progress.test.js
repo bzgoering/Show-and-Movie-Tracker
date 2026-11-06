@@ -70,3 +70,16 @@ test('without a last episode, falls back to seasons that have premiered', () => 
   const cache = { seasons: [{ season: 1, episodeCount: 8, airDate: '2020-01-01' }, { season: 2, episodeCount: 8, airDate: '2099-01-01' }] };
   assert.deepEqual(latestAired(cache), { season: 1, episode: 8 });
 });
+
+import { statusOf } from '../public/progress.js';
+
+test('caught-up Watching shows with more coming show as Waiting', () => {
+  const show = (progress, prediction, label = 'watching') => ({ type: 'tv', label, progress, cache: airing, prediction });
+  assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'confirmed' })), 'waiting');
+  assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'estimated' })), 'waiting');
+  assert.equal(statusOf(show({ season: 2, episode: 3 }, { kind: 'confirmed' })), 'watching', 'not caught up');
+  assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'ended' })), 'watching', 'nothing more is coming');
+  assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'confirmed' }, 'watched')), 'watched');
+  assert.equal(statusOf(show({ season: 1, episode: 0 }, { kind: 'confirmed' }, 'planned')), 'planned');
+  assert.equal(statusOf({ type: 'movie', label: 'watched' }), 'watched');
+});

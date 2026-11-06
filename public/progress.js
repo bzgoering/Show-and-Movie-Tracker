@@ -61,3 +61,12 @@ export function formatProgress(progress) {
   if (!progress || (progress.season === 1 && progress.episode === 0)) return 'Not started';
   return `S${progress.season} · E${progress.episode}`;
 }
+
+// What a title shows as in the library. A "Watching" show you're caught up on, with more
+// episodes or seasons still to come, shows as "Waiting" until something new comes out.
+export function statusOf(item) {
+  if (item.type === 'tv' && item.label === 'watching' && item.prediction?.kind !== 'ended' && isCaughtUp(item.progress, item.cache)) {
+    return 'waiting';
+  }
+  return item.label;
+}

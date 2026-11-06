@@ -1,7 +1,7 @@
-import { airedSeasons, formatProgress, isCaughtUp, latestAired, nextEpisode, remainingCount } from './progress.js';
+import { airedSeasons, formatProgress, isCaughtUp, latestAired, nextEpisode, remainingCount, statusOf } from './progress.js';
 
 const IMG = 'https://image.tmdb.org/t/p/';
-const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', watched: 'Watched' };
+const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
 const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 'watched'] };
 
 const state = { items: [], filter: 'all', openId: null };
@@ -48,7 +48,7 @@ function matchesFilter(item) {
   const f = state.filter;
   if (f === 'all') return true;
   if (f === 'movie' || f === 'tv') return item.type === f;
-  return item.label === f;
+  return statusOf(item) === f;
 }
 
 // "2026-11-13" -> "Nov 13" (or "Nov 13, 2027" when it's not this year)
@@ -119,7 +119,7 @@ function renderGrid() {
           ${item.posterPath ? `<img src="${poster(item.posterPath)}" alt="" loading="lazy">` : `<div class="no-poster">${esc(item.title)}</div>`}
         </div>
         <div class="card-title">${esc(item.title)}</div>
-        <div class="card-meta"><span class="label ${item.label}">${LABEL_NAMES[item.label]}</span> · ${esc(cardMeta(item))}</div>
+        <div class="card-meta"><span class="label ${statusOf(item)}">${LABEL_NAMES[statusOf(item)]}</span> · ${esc(cardMeta(item))}</div>
         ${
           release
             ? `<div class="card-next${release.soon ? ' soon' : ''}">${release.tag ? `<span class="next-tag">${esc(release.tag)}</span> ` : ''}${esc(release.text)}</div>`
@@ -329,7 +329,7 @@ function tvSection(item) {
         ${
           next
             ? `<button id="next-ep" class="primary">Mark S${next.season} E${next.episode} as watched</button>`
-            : '<span id="next-ep" class="caught-up">✓ Caught up</span>'
+            : `<span id="next-ep" class="caught-up">✓ Caught up${statusOf(item) === 'waiting' ? '<span class="muted small"> · shown under Waiting until new episodes come out</span>' : ''}</span>`
         }
         ${latest && !caughtUp ? `<button id="latest-ep">Jump to latest (S${latest.season} E${latest.episode})</button>` : ''}
       </div>`

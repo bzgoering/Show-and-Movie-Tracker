@@ -8,6 +8,7 @@
   --accent: #e8b04b;
   --planned: #d9a53f;
   --watching: #5fa8d3;
+  --waiting: #b39ddb;
   --watched: #6dbf8b;
   --danger: #e06666;
   color-scheme: dark;
@@ -147,6 +148,7 @@ main { padding: 16px 28px 48px; }
 
 .label.planned { color: var(--planned); }
 .label.watching { color: var(--watching); }
+.label.waiting { color: var(--waiting); }
 .label.watched { color: var(--watched); }
 
 /* ---------- Detail modal ---------- */
