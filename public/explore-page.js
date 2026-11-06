@@ -30,13 +30,24 @@ function showExploreMessage(text) {
 
 // ---------- Switching between Library and Explore ----------
 
+// The page you're on is kept in the address (#library or #explore), so refreshing
+// stays on it and the back button moves between them.
+const viewFromHash = () => (location.hash === '#explore' ? 'explore' : 'library');
+
+function showView(view) {
+  for (const [name, el] of Object.entries(views)) el.hidden = name !== view;
+  document.querySelectorAll('.view-tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
+  if (view === 'explore') openExplore();
+}
+
 document.querySelector('.views').addEventListener('click', (e) => {
   const tab = e.target.closest('.view-tab');
   if (!tab) return;
-  for (const [name, el] of Object.entries(views)) el.hidden = name !== tab.dataset.view;
-  document.querySelectorAll('.view-tab').forEach((t) => t.classList.toggle('active', t === tab));
-  if (tab.dataset.view === 'explore') openExplore();
+  if (viewFromHash() === tab.dataset.view) return;
+  location.hash = tab.dataset.view; // triggers hashchange below
 });
+
+window.addEventListener('hashchange', () => showView(viewFromHash()));
 
 // Your library changed (added, removed, relabeled): recompute suggestions the next time they're opened.
 document.addEventListener('library:changed', () => {
@@ -297,3 +308,6 @@ $('#region-select').addEventListener('change', async (e) => {
   ex.providers = [];
   loadServices();
 });
+
+// Open whichever page the address points to (e.g. after a refresh).
+showView(viewFromHash());
