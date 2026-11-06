@@ -112,7 +112,8 @@ function renderGrid() {
   const items = state.items.filter(matchesFilter);
   grid.innerHTML = items
     .map((item) => {
-      const release = item.type === 'tv' ? cardRelease(item.prediction) : null;
+      // Release info only matters once you're caught up (Waiting) or done (Watched).
+      const release = item.type === 'tv' && ['waiting', 'watched'].includes(statusOf(item)) ? cardRelease(item.prediction) : null;
       return `
       <button class="card" data-id="${esc(item.id)}" title="${esc(item.title)}">
         <div class="poster">
