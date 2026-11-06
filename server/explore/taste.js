@@ -19,7 +19,7 @@ export function normalizeGenres(names = []) {
 const hasStarted = (p) => Boolean(p) && (p.season > 1 || p.episode > 0);
 
 // How far into a show you are. `known` is false when TMDB episode info hasn't been loaded yet.
-export function engagement(item) {
+function engagement(item) {
   const cache = item.cache || {};
   const p = item.progress || { season: 1, episode: 0 };
   const started = hasStarted(p);

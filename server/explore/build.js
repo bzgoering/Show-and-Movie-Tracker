@@ -100,7 +100,7 @@ export function pickSeeds(items, { liking = new Map(), max = 10 } = {}) {
 }
 
 // TMDB's "Animation" genre (same id for movies and TV) covers both anime and Western cartoons.
-export const ANIMATION = 16;
+const ANIMATION = 16;
 export const isAnimated = (c) => (c.genreIds || []).includes(ANIMATION);
 
 // The Explore tabs. Shows are split into live action and anime & cartoons.

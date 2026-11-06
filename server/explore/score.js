@@ -8,7 +8,7 @@ const GENRE_SPECIFICITY = { Drama: 0.5 };
 // Averaged over the title's genres, so a title tagged with many loosely related genres
 // doesn't outscore one that closely matches what you watch. Drama counts as half a genre,
 // so a title tagged only "Drama" gets half the credit: that alone doesn't make it your kind of thing.
-export function genreFit(c, profile) {
+function genreFit(c, profile) {
   const genres = normalizeGenres(c.genres);
   const weights = profile.typeGenreWeights?.[c.type] || profile.genreWeights;
   if (!genres.length || !weights.size) return null;
@@ -22,7 +22,7 @@ const TYPICAL_RATING = { movie: 6.7, tv: 7.4 };
 
 // 0..1, where 0.5 is a typical rating, 1 is 1.5 points above it and 0 is 1.5 below.
 // With few votes the rating is pulled toward typical, so a handful of fans can't make a title look great.
-export function qualityOf(c) {
+function qualityOf(c) {
   const typical = TYPICAL_RATING[c.type] ?? 7;
   const votes = c.voteCount || 0;
   const rating = (votes * (c.voteAverage || 0) + 150 * typical) / (votes + 150);
@@ -68,7 +68,7 @@ export const DEFAULT_WEIGHTS = { rec: 0.4, genre: 0.3, quality: 0.15, type: 0.05
 
 // How much "Not interested" can pull a score down (in match points out of 100: 12).
 // Smaller than the recommendation and genre signals, so dislikes balance the picture rather than drive it.
-export const DISLIKE_WEIGHT = 0.12;
+const DISLIKE_WEIGHT = 0.12;
 
 // Every title starts from 10%: with nothing for or against it, anyone might like it.
 const BASELINE = 0.1;

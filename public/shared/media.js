@@ -9,7 +9,7 @@ export const LABELS_FOR = {
 export const isMediaType = (type) => Object.hasOwn(LABELS_FOR, type);
 
 // TMDB statuses that mean a show is over.
-export const ENDED_STATUSES = ['Ended', 'Canceled'];
+const ENDED_STATUSES = ['Ended', 'Canceled'];
 export const isEndedStatus = (status) => ENDED_STATUSES.includes(status);
 
 // The Explore tabs. Shows are split by TMDB's Animation genre.

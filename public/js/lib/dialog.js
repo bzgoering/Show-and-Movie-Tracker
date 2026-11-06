@@ -20,7 +20,6 @@ export function updateDialog(html) {
 }
 
 export const closeDialog = () => dialog.open && dialog.close();
-export const dialogBody = () => body;
 
 body.addEventListener('click', (e) => owner?.onClick?.(e));
 body.addEventListener('change', (e) => owner?.onChange?.(e));
