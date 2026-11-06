@@ -31,6 +31,7 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 
 ## Features
 - Search for any movie or TV show and add it with one click
+- Search your own library by title (finds titles under any label, and ignores accents and punctuation)
 - Poster grid of everything you've added, with filters for Watching, Waiting, Planned, Watched, Movies and Shows
 - **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched

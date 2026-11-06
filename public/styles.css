@@ -95,7 +95,19 @@ button:disabled { cursor: default; opacity: 0.5; }
 
 main { padding: 16px 28px 48px; }
 
-.filters { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-bottom: 20px; }
+.library-bar { display: flex; align-items: center; gap: 12px 20px; margin-bottom: 20px; }
+.filters { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.library-search {
+  margin-left: auto;
+  width: 220px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+  font-size: 0.9rem;
+}
+.library-search:focus { border-color: #666; }
 .chip {
   padding: 4px 0;
   border: none;
@@ -224,6 +236,10 @@ select {
   .filters { flex-wrap: nowrap; overflow-x: auto; gap: 14px; scrollbar-width: none; }
   .chip { white-space: nowrap; }
   .chip.gap { margin-left: 6px; }
+  .library-bar { flex-wrap: wrap; }
+  .filters { order: 2; width: 100%; }
+  .library-search { order: 1; flex: 1; width: auto; margin-left: 0; }
+  .sync-status { order: 1; }
   .card-meta { white-space: normal; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 18px 12px; }
   .detail { padding: 18px; }
@@ -271,6 +287,6 @@ select {
 }
 #latest-ep:hover { border-color: #666; }
 
-.sync-status { margin-left: auto; align-self: center; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.sync-status { align-self: center; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
 .grid.loading { opacity: 0.5; }
 .caught-up { color: var(--watched); padding: 6px 0; margin-right: 6px; }

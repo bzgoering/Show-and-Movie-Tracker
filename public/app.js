@@ -4,7 +4,7 @@ const IMG = 'https://image.tmdb.org/t/p/';
 const LABEL_NAMES = { planned: 'Planned', watching: 'Watching', waiting: 'Waiting', watched: 'Watched' };
 const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 'watched'] };
 
-const state = { items: [], filter: 'all', openId: null };
+const state = { items: [], filter: 'all', query: '', openId: null };
 
 const $ = (sel) => document.querySelector(sel);
 const grid = $('#grid');
@@ -44,7 +44,16 @@ function upsert(item) {
 
 // ---------- Library grid ----------
 
+// Lowercase, drop accents and punctuation, so "pokemon" finds "Pokémon" and "spiderman" finds "Spider-Man".
+const normalize = (s) =>
+  String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+
 function matchesFilter(item) {
+  if (state.query && !normalize(item.title).includes(normalize(state.query))) return false;
   const f = state.filter;
   if (f === 'all') return true;
   if (f === 'movie' || f === 'tv') return item.type === f;
@@ -130,9 +139,30 @@ function renderGrid() {
     })
     .join('');
   $('#empty').hidden = items.length > 0;
-  if (state.items.length > 0 && items.length === 0) $('#empty').textContent = 'Nothing matches this filter.';
+  if (state.items.length > 0 && items.length === 0 && state.query) $('#empty').textContent = `Nothing in your library matches "${state.query}".`;
+  else if (state.items.length > 0 && items.length === 0) $('#empty').textContent = 'Nothing matches this filter.';
   else $('#empty').textContent = 'Nothing here yet. Search for a movie or show above to add it.';
 }
+
+function setFilter(filter) {
+  state.filter = filter;
+  document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === filter));
+}
+
+// Library search looks through everything, so it switches to the All tab.
+const librarySearch = $('#library-search');
+librarySearch.addEventListener('input', () => {
+  state.query = librarySearch.value.trim();
+  if (state.query && state.filter !== 'all') setFilter('all');
+  renderGrid();
+});
+librarySearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && librarySearch.value) {
+    librarySearch.value = '';
+    state.query = '';
+    renderGrid();
+  }
+});
 
 document.querySelector('.filters').addEventListener('click', (e) => {
   const chip = e.target.closest('.chip');
