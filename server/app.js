@@ -87,8 +87,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false }) {
       year: details.year,
       posterPath: details.posterPath,
       overview: details.overview,
-      cache: details.cache,
-      updatedAt: new Date().toISOString(),
+      cache: details.cache, // cache.lastFetched records when TMDB info was refreshed
     });
     if (item.label === 'planned' && region) await attachProviders(item, region);
   }

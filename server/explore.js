@@ -42,8 +42,10 @@ export function tasteProfile(items) {
 // The four positive signals, each 0..1.
 export function scoreParts(c, profile) {
   const genres = normalizeGenres(c.genres);
+  // Average over the title's genres, so a title tagged with many loosely related genres
+  // doesn't outscore one that closely matches what you watch.
   const genreSum = genres.reduce((sum, g) => sum + (profile.genreWeights.get(g) || 0), 0);
-  const genre = genres.length ? Math.min(1, genreSum / Math.min(genres.length, 3)) : 0;
+  const genre = genres.length ? genreSum / genres.length : 0;
 
   // Recommended by several of your titles = a strong signal.
   const rec = Math.min(1, (c.recommendedBy || []).reduce((sum, r) => sum + r.weight, 0) / 6);
@@ -109,7 +111,10 @@ export function scoreCandidate(c, profile, { weights = DEFAULT_WEIGHTS, dprofile
 // A short, human reason for a suggestion.
 export function reasonFor(c, profile) {
   const recs = [...(c.recommendedBy || [])].sort((a, b) => b.weight - a.weight);
-  if (recs.length) return `Because you ${recs[0].label === 'planned' ? 'saved' : 'watched'} ${recs[0].title}`;
+  if (recs.length) {
+    const verb = { watching: "you're watching", planned: 'you saved' }[recs[0].label] || 'you watched';
+    return `Because ${verb} ${recs[0].title}`;
+  }
   if (profile.empty) return 'Popular this week';
   return `Popular with ${c.type === 'movie' ? 'movies' : 'shows'} like yours`;
 }
@@ -147,6 +152,25 @@ async function genreIdsFor(tmdb, type, wanted) {
   return [...map].filter(([, name]) => normalizeGenres([name]).some((g) => wanted.includes(g))).map(([id]) => id);
 }
 
+// Which library titles to ask TMDB for "if you liked this" lists (one request each, so at most 10).
+// A mix, newest first within each group: what you're watching now says most about your current
+// taste, what you've finished says a lot, and a couple of planned titles add what you're curious about.
+// Leftover slots go to whatever else ranks highest.
+export function pickSeeds(items, max = 10) {
+  const recency = (i) => i.updatedAt || i.addedAt || '';
+  const newest = (list) => [...list].sort((a, b) => recency(b).localeCompare(recency(a)));
+  const groups = [
+    [newest(items.filter((i) => i.label === 'watching')), 4],
+    [newest(items.filter((i) => i.label === 'watched')), 4],
+    [newest(items.filter((i) => i.label === 'planned')), 2],
+  ];
+  const picked = groups.flatMap(([list, n]) => list.slice(0, n));
+  const rest = items
+    .filter((i) => !picked.includes(i))
+    .sort((a, b) => (LABEL_WEIGHT[b.label] || 1) - (LABEL_WEIGHT[a.label] || 1) || recency(b).localeCompare(recency(a)));
+  return [...picked, ...rest].slice(0, max);
+}
+
 // Recently scored suggestions, so feedback (add / not interested) can record what the score was based on.
 const recent = new Map();
 export const recentSuggestion = (key) => recent.get(key) || null;
@@ -163,18 +187,15 @@ export async function buildExplore({ tmdb, items, region = 'US', services = [], 
     for (const c of list) {
       if (!types.includes(c.type) || owned.has(keyOf(c)) || !c.posterPath) continue;
       const entry = candidates.get(keyOf(c)) || { ...c, recommendedBy: [] };
-      if (seed && !entry.recommendedBy.some((r) => r.title === seed.title)) entry.recommendedBy.push(seed);
+      if (seed && !entry.recommendedBy.some((r) => r.key === seed.key)) entry.recommendedBy.push(seed);
       candidates.set(keyOf(c), entry);
     }
   }
 
-  // Seeds: your strongest signals first (watched, then watching, then planned).
-  const seeds = [...items]
-    .sort((a, b) => (LABEL_WEIGHT[b.label] || 1) - (LABEL_WEIGHT[a.label] || 1) || (b.updatedAt || '').localeCompare(a.updatedAt || ''))
-    .slice(0, 10);
+  const seeds = pickSeeds(items);
   const jobs = seeds.map((s) => () =>
     cached(`rec:${s.type}:${s.tmdbId}`, 24 * HOURS, () => tmdb.recommendations(s.type, s.tmdbId)).then((list) =>
-      add(list, { title: s.title, label: s.label, weight: LABEL_WEIGHT[s.label] || 1 }),
+      add(list, { key: `${s.type}-${s.tmdbId}`, title: s.title, label: s.label, weight: LABEL_WEIGHT[s.label] || 1 }),
     ),
   );
 
