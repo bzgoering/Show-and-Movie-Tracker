@@ -37,6 +37,7 @@ The first time it runs, it creates an empty `data/library.json`. After that it l
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
 - Season and episode tracking for shows: pick the episode you're on (only episodes that have aired are listed), or "Caught up"
 - One-click buttons to mark the episode you're on as watched, or jump straight to the newest episode
+- On the last episode of a show that has ended, the button becomes **Done**, which marks it watched and moves the show to Watched
 - Shows how many aired episodes you have left
 - "What's next" for each show, labeled so it's clear what's coming:
   - **Next episode**: for weekly shows, the date of the next episode and when the season finale airs

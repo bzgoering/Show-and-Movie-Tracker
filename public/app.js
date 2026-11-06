@@ -271,14 +271,14 @@ dialog.addEventListener('click', (e) => {
 });
 
 // Episode choices for one season. The newest season also gets a "Caught up" choice at the end.
-function episodeOptions(seasons, season, current, latest) {
+function episodeOptions(seasons, season, current, latest, ended = false) {
   const count = seasons.find((s) => s.season === season)?.episodeCount || 0;
   const opts = [];
   for (let ep = 1; ep <= count; ep++) {
     opts.push(`<option value="${ep}"${current && ep === current.episode ? ' selected' : ''}>Episode ${ep}</option>`);
   }
   if (latest && season === latest.season) {
-    opts.push(`<option value="done"${current ? '' : ' selected'}>✓ Caught up</option>`);
+    opts.push(`<option value="done"${current ? '' : ' selected'}>${ended ? '✓ Finished' : '✓ Caught up'}</option>`);
   }
   return opts.join('');
 }
@@ -344,6 +344,9 @@ function tvSection(item) {
   const left = remainingCount(item);
   const pred = item.prediction || {};
   const atLatest = current && latest && current.season === latest.season && current.episode === latest.episode;
+  const ended = pred.kind === 'ended';
+  // On the final episode of a finished show (or caught up on one that's still labeled Watching/Planned): offer "Done".
+  const showDone = ended && latest && (atLatest || (!current && item.label !== 'watched'));
 
   const seasonLabel = (s) =>
     s.totalEpisodes && s.totalEpisodes > s.episodeCount ? `${s.name} (${s.episodeCount} of ${s.totalEpisodes} out)` : `${s.name} (${s.episodeCount})`;
@@ -357,14 +360,18 @@ function tvSection(item) {
           </select>
         </label>
         <label>Episode you're on
-          <select id="episode-select">${episodeOptions(seasons, shownSeason, current, latest)}</select>
+          <select id="episode-select">${episodeOptions(seasons, shownSeason, current, latest, ended)}</select>
         </label>
       </div>
       <div class="row buttons">
         ${
-          current
-            ? `<button id="next-ep" class="primary">Mark S${current.season} E${current.episode} as watched</button>`
-            : `<span id="next-ep" class="caught-up">✓ Caught up${statusOf(item) === 'waiting' ? '<span class="muted small"> · shown under Waiting until new episodes come out</span>' : ''}</span>`
+          showDone
+            ? `<button id="done-btn" class="primary">Done</button><span class="muted small">Marks the last episode watched and moves this show to Watched</span>`
+            : current
+              ? `<button id="next-ep" class="primary">Mark S${current.season} E${current.episode} as watched</button>`
+              : ended
+                ? '<span id="next-ep" class="caught-up">✓ Finished</span>'
+                : `<span id="next-ep" class="caught-up">✓ Caught up${statusOf(item) === 'waiting' ? '<span class="muted small"> · shown under Waiting until new episodes come out</span>' : ''}</span>`
         }
         ${current && !atLatest ? `<button id="latest-ep">Jump to latest (S${latest.season} E${latest.episode})</button>` : ''}
       </div>`
@@ -450,6 +457,11 @@ detailBody.addEventListener('click', async (e) => {
   if (e.target.id === 'next-ep') {
     const current = currentEpisode(item);
     if (current) return setProgress(item, current); // finished this one, so it becomes the last watched
+  }
+
+  if (e.target.id === 'done-btn') {
+    const latest = latestAired(item.cache);
+    if (latest) return save({ progress: { season: latest.season, episode: latest.episode }, label: 'watched' });
   }
 
   if (e.target.id === 'latest-ep') {
