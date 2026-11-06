@@ -50,3 +50,33 @@ test('concurrent updates do not overwrite each other', async () => {
   await Promise.all(Array.from({ length: 20 }, (_, i) => store.update((d) => d.items.push({ id: i }))));
   assert.equal((await store.read()).items.length, 20);
 });
+
+test('retries when another program has the file locked (OneDrive, antivirus)', async () => {
+  const file = await tempFile();
+  let failures = 2;
+  const flakyRename = async (from, to) => {
+    if (failures-- > 0) throw Object.assign(new Error('locked'), { code: 'EPERM' });
+    return fs.rename(from, to);
+  };
+  const store = createStore(file, { rename: flakyRename });
+  await store.init();
+  await store.update((d) => d.items.push({ id: 'saved' }));
+  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')).items, [{ id: 'saved' }]);
+});
+
+test('falls back to writing directly if the file stays locked', async () => {
+  const file = await tempFile();
+  const alwaysLocked = async () => { throw Object.assign(new Error('busy'), { code: 'EBUSY' }); };
+  const store = createStore(file, { rename: alwaysLocked });
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    await store.init();
+    await store.update((d) => d.items.push({ id: 'kept' }));
+  } finally {
+    console.warn = warn;
+  }
+  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')).items, [{ id: 'kept' }]);
+  const files = await fs.readdir(path.dirname(file));
+  assert.ok(!files.includes('library.json.tmp'), 'temp file cleaned up');
+});
