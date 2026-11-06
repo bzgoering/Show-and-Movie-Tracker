@@ -97,8 +97,8 @@ main { padding: 16px 28px 48px; }
 
 .library-bar { display: flex; align-items: center; gap: 12px 20px; margin-bottom: 20px; }
 .filters { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.list-controls { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .library-search {
-  margin-left: auto;
   width: 220px;
   padding: 6px 10px;
   background: var(--surface);
@@ -108,9 +108,8 @@ main { padding: 16px 28px 48px; }
   font-size: 0.9rem;
 }
 .library-search:focus { border-color: #666; }
-.sort-select { margin-left: auto; min-width: 0; padding: 6px 8px; font-size: 0.9rem; }
-.sort-select:not([hidden]) + .library-search { margin-left: 0; }
-.sort-select[hidden] { display: none; }
+.sort-select, .genre-select { min-width: 0; max-width: 200px; padding: 6px 8px; font-size: 0.9rem; }
+.sort-select[hidden], .genre-select[hidden] { display: none; }
 .chip {
   padding: 4px 0;
   border: none;
@@ -241,8 +240,9 @@ select {
   .chip.gap { margin-left: 6px; }
   .library-bar { flex-wrap: wrap; }
   .filters { order: 2; width: 100%; }
-  .library-search { order: 1; flex: 1 1 0; min-width: 0; width: auto; margin-left: 0; }
-  .sort-select { order: 1; flex: none; margin-left: 0; }
+  .list-controls { order: 1; width: 100%; margin-left: 0; flex-wrap: wrap; }
+  .library-search { flex: 1 1 100%; min-width: 0; width: auto; }
+  .sort-select, .genre-select { flex: 1 1 0; max-width: none; }
   .sync-status { order: 1; }
   .card-meta { white-space: normal; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 18px 12px; }

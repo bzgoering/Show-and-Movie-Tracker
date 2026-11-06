@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sortItems, releaseDate } from '../public/sort.js';
+import { hasGenre, libraryGenres, sortItems, releaseDate } from '../public/sort.js';
 
 const seasons = [{ season: 1, episodeCount: 8, airDate: '2020-01-01' }];
 const latest = { season: 1, episode: 8 };
@@ -34,12 +34,25 @@ test('release date is newest first, with the year as a fallback and unknowns las
   assert.equal(releaseDate(items[3]), '2010-01-01');
 });
 
-test('genre groups by main genre, A-Z inside, unknowns last', () => {
-  assert.deepEqual(titles(sortItems(items, 'genre')), ['Middle Movie', 'apple Wait', 'Banana Done', 'Zebra Watch', 'No Data']);
+test('lists the genres in the library with counts, A-Z', () => {
+  assert.deepEqual(libraryGenres(items), [
+    { name: 'Action', count: 1 },
+    { name: 'Comedy', count: 1 },
+    { name: 'Drama', count: 2 },
+  ]);
+  assert.deepEqual(libraryGenres([]), []);
+});
+
+test('genre picker matches any of a title\'s genres', () => {
+  const multi = movie('Multi', 'planned', { genres: ['Comedy', 'Drama'] });
+  assert.equal(hasGenre(multi, 'Drama'), true);
+  assert.equal(hasGenre(multi, 'Action'), false);
+  assert.equal(hasGenre(multi, ''), true, 'no genre picked shows everything');
+  assert.equal(hasGenre(items[4], 'Drama'), false, 'titles without genres only show under All genres');
 });
 
 test('does not change the original list', () => {
   const before = titles(items);
-  sortItems(items, 'genre');
+  sortItems(items, 'release');
   assert.deepEqual(titles(items), before);
 });

@@ -11,8 +11,6 @@ export function releaseDate(item) {
   return (item.type === 'movie' ? c.releaseDate : c.firstAirDate) || (item.year ? `${item.year}-01-01` : null);
 }
 
-export const mainGenre = (item) => item.cache?.genres?.[0] || null;
-
 // Puts items missing the value at the end, then falls back to A-Z.
 function by(value, compare) {
   return (a, b) => {
@@ -29,9 +27,21 @@ export const SORTS = {
   title: byTitle,
   progress: by((i) => PROGRESS_ORDER[statusOf(i)], (a, b) => a - b),
   release: by(releaseDate, (a, b) => b.localeCompare(a)), // newest first
-  genre: by(mainGenre, (a, b) => a.localeCompare(b)),
 };
 
 export function sortItems(items, sort = 'title') {
   return [...items].sort(SORTS[sort] || SORTS.title);
 }
+
+// Every genre in the library, A-Z, with how many titles have it: [{ name: 'Drama', count: 4 }, ...]
+export function libraryGenres(items) {
+  const counts = new Map();
+  for (const item of items) {
+    for (const g of new Set(item.cache?.genres || [])) counts.set(g, (counts.get(g) || 0) + 1);
+  }
+  return [...counts]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export const hasGenre = (item, genre) => !genre || (item.cache?.genres || []).includes(genre);

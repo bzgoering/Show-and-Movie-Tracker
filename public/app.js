@@ -1,4 +1,4 @@
-import { sortItems } from './sort.js';
+import { hasGenre, libraryGenres, sortItems } from './sort.js';
 import { airedSeasons, currentEpisode, latestAired, progressForCurrent, progressSummary, statusOf } from './progress.js';
 
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -8,13 +8,14 @@ const LABELS_FOR = { movie: ['planned', 'watched'], tv: ['planned', 'watching', 
 // The chosen sort is remembered in this browser between visits.
 function savedSort() {
   try {
-    return localStorage.getItem('sort') || 'title';
+    const sort = localStorage.getItem('sort');
+    return ['title', 'progress', 'release'].includes(sort) ? sort : 'title';
   } catch {
     return 'title';
   }
 }
 
-const state = { items: [], filter: 'all', query: '', sort: savedSort(), openId: null };
+const state = { items: [], filter: 'all', query: '', sort: savedSort(), genre: '', openId: null };
 
 const $ = (sel) => document.querySelector(sel);
 const grid = $('#grid');
@@ -63,6 +64,7 @@ const normalize = (s) =>
     .replace(/[^a-z0-9]+/g, '');
 
 function matchesFilter(item) {
+  if (state.filter === 'all' && !hasGenre(item, state.genre)) return false;
   if (state.query && !normalize(item.title).includes(normalize(state.query))) return false;
   const f = state.filter;
   if (f === 'all') return true;
@@ -125,7 +127,8 @@ function cardMeta(item) {
 }
 
 function renderGrid() {
-  // Sorting is offered on the All tab; the other tabs stay A-Z.
+  // Sorting and the genre picker are offered on the All tab; the other tabs stay A-Z.
+  renderGenreOptions();
   const items = sortItems(state.items.filter(matchesFilter), state.filter === 'all' ? state.sort : 'title');
   sortSelect.hidden = state.filter !== 'all';
   grid.innerHTML = items
@@ -149,10 +152,30 @@ function renderGrid() {
     })
     .join('');
   $('#empty').hidden = items.length > 0;
-  if (state.items.length > 0 && items.length === 0 && state.query) $('#empty').textContent = `Nothing in your library matches "${state.query}".`;
+  if (state.items.length > 0 && items.length === 0 && state.genre && !state.query) $('#empty').textContent = `Nothing in ${state.genre}.`;
+  else if (state.items.length > 0 && items.length === 0 && state.query) $('#empty').textContent = `Nothing in your library matches "${state.query}".`;
   else if (state.items.length > 0 && items.length === 0) $('#empty').textContent = 'Nothing matches this filter.';
   else $('#empty').textContent = 'Nothing here yet. Search for a movie or show above to add it.';
 }
+
+const genreSelect = $('#genre-select');
+
+// Fills the genre picker with the genres in your library. Hidden until titles have genres
+// (they're saved on the next refresh) and on tabs other than All.
+function renderGenreOptions() {
+  const genres = libraryGenres(state.items);
+  if (state.genre && !genres.some((g) => g.name === state.genre)) state.genre = '';
+  genreSelect.innerHTML =
+    '<option value="">All genres</option>' +
+    genres.map((g) => `<option value="${esc(g.name)}">${esc(g.name)} (${g.count})</option>`).join('');
+  genreSelect.value = state.genre;
+  genreSelect.hidden = state.filter !== 'all' || genres.length === 0;
+}
+
+genreSelect.addEventListener('change', () => {
+  state.genre = genreSelect.value;
+  renderGrid();
+});
 
 const sortSelect = $('#sort-select');
 sortSelect.value = state.sort;

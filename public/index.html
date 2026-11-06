@@ -26,13 +26,17 @@
         <button class="chip gap" data-filter="movie">Movies</button>
         <button class="chip" data-filter="tv">Shows</button>
       </nav>
-      <select id="sort-select" class="sort-select" aria-label="Sort">
-        <option value="title">Sort: A–Z</option>
-        <option value="progress">Sort: Progress</option>
-        <option value="release">Sort: Release date</option>
-        <option value="genre">Sort: Genre</option>
-      </select>
-      <input id="library-search" class="library-search" type="search" placeholder="Search library" autocomplete="off" aria-label="Search your library">
+      <div class="list-controls">
+        <select id="genre-select" class="genre-select" aria-label="Genre" hidden>
+          <option value="">All genres</option>
+        </select>
+        <select id="sort-select" class="sort-select" aria-label="Sort">
+          <option value="title">Sort: A–Z</option>
+          <option value="progress">Sort: Progress</option>
+          <option value="release">Sort: Release date</option>
+        </select>
+        <input id="library-search" class="library-search" type="search" placeholder="Search library" autocomplete="off" aria-label="Search your library">
+      </div>
       <span id="sync-status" class="sync-status"></span>
     </div>
 
