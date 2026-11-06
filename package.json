@@ -1,0 +1,18 @@
+{
+  "name": "show-and-movie-tracker",
+  "version": "1.0.0",
+  "description": "Track the movies and TV shows you want to watch, and where you are in each show.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.9"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

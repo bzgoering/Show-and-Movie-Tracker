@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Show &amp; Movie Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">Show &amp; Movie Tracker</h1>
+    <div class="search">
+      <input id="search-input" type="search" placeholder="Search movies and TV shows…" autocomplete="off" aria-label="Search movies and TV shows">
+      <ul id="search-results" class="search-results" hidden></ul>
+    </div>
+  </header>
+
+  <main>
+    <nav class="filters" aria-label="Filter library">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="watching">Watching</button>
+      <button class="chip" data-filter="planned">Planned</button>
+      <button class="chip" data-filter="watched">Watched</button>
+      <button class="chip gap" data-filter="movie">Movies</button>
+      <button class="chip" data-filter="tv">Shows</button>
+    </nav>
+
+    <p id="message" class="message" hidden></p>
+    <section id="grid" class="grid" aria-live="polite"></section>
+    <p id="empty" class="empty" hidden>Nothing here yet. Search for a movie or show above to add it.</p>
+  </main>
+
+  <dialog id="detail" class="detail">
+    <form method="dialog" class="detail-close"><button aria-label="Close">✕</button></form>
+    <div id="detail-body"></div>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
