@@ -43,13 +43,14 @@ Then restart the app (Ctrl+C in its window, then `npm start`). The page picks up
 ## Features
 
 - Search for any movie or TV show and add it with one click
-- Sort the All tab by A–Z (default), progress (Watching → Waiting → Planned → Watched) or release date (newest first)
+- Sort the All tab by A–Z (default), progress (Watching → Waiting → Planned → Watched), release date (newest first) or rating (Great first)
 - Pick a genre on the All tab to see only titles in it. The list only has genres from your own library.
 - Search your own library by title (finds titles under any label, and ignores accents and punctuation)
 - Poster grid of everything you've added, with filters for Watching, Waiting, Planned, Watched, Movies and Shows
 - **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
 - If a show that ended comes back (renewed, revived or rebranded), it's moved out of Watched on the next start and shows up under Waiting again
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
+- **Rate** titles with 1 to 3 stars: ★ Meh, ★★ Good, ★★★ Great. Everything in your library is something you liked, so Meh just means "not as much as the others". Rate any time from a title's details; when you finish something (mark it Watched, or press Done on a show) and haven't rated it, you're asked how it was. Rated titles show their stars on the poster.
 - Season and episode tracking for shows: pick the episode you're on (only episodes that have aired are listed), or "Caught up"
 - One-click buttons to mark the episode you're on as watched, or jump straight to the newest episode
 - On the last episode of a show that has ended, the button becomes **Done**, which marks it watched and moves the show to Watched
@@ -84,6 +85,7 @@ The **Explore** tab suggests movies and shows you'll probably like, best match f
 - A show you're partway through counts more the further in you are.
 - A show that looks dropped (stuck near the start and untouched for two months) barely counts, and isn't used to find suggestions. If you never set episodes on any show, this check is skipped.
 - Planned titles show what you're curious about, so they count a little. Ones you saved from Explore count even less, so Explore doesn't just hear its own suggestions back.
+- Your **rating** scales all of this: Great counts more than a title you finished without rating, Good the same, and Meh still counts, just less. Suggestions based on a title you rated Great say "Because you loved…".
 
 **What the match % means.** It's how strongly your library points to a title, so it means the same thing on every tab:
 

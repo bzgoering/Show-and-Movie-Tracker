@@ -262,3 +262,34 @@ test('a tab you do not have falls back to the closest one you do', () => {
   assert.equal(resolveTab(undefined, oneKind), 'all');
   assert.equal(resolveTab('nonsense', oneKind), 'all');
 });
+
+import { affinity, reasonFor } from '../server/explore/index.js';
+
+test('ratings scale how much a title counts, and Meh is still a like', () => {
+  const finished = { type: 'tv', label: 'watched', progress: { season: 5, episode: 16 }, cache: {} };
+  const unrated = affinity(finished);
+  const great = affinity({ ...finished, rating: 3 });
+  const good = affinity({ ...finished, rating: 2 });
+  const meh = affinity({ ...finished, rating: 1 });
+  assert.ok(great > good && good === unrated && meh < good, `${great} > ${good} = ${unrated} > ${meh}`);
+  const dropped = {
+    type: 'tv',
+    label: 'watching',
+    progress: { season: 1, episode: 2 },
+    updatedAt: '2020-01-01',
+    addedAt: '2020-01-01',
+    cache: { seasons: [{ season: 1, episodeCount: 20 }], lastEpisode: { season: 1, episode: 20 } },
+  };
+  assert.ok(meh > affinity(dropped), 'a Meh rating still counts more than a show that looks dropped');
+  // A rating is a clear opinion: a show you rated Great counts well above a dropped one, even if you
+  // stopped early, though less than one you finished.
+  assert.ok(affinity({ ...dropped, rating: 3 }) > 0.6, 'rated Great counts like a real like');
+  assert.ok(affinity({ ...dropped, rating: 3 }) < affinity({ ...finished, rating: 3 }));
+});
+
+test('suggestions from a title you rated Great say you loved it', () => {
+  assert.equal(
+    reasonFor({ recommendedBy: [{ title: 'Severance', label: 'watching', rating: 3, weight: 1.3 }] }),
+    'Because you loved Severance',
+  );
+});

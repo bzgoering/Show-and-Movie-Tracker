@@ -16,6 +16,7 @@
   --text-soft: #cfcfcf;
   --muted: #999;
   --accent: #e8b04b;
+  --star-off: #555;
   --on-accent: #1a1a1a;
   --danger: #e06666;
   --overlay: rgba(0, 0, 0, 0.7);
@@ -386,6 +387,7 @@ select {
 }
 
 .poster {
+  position: relative;
   aspect-ratio: 2 / 3;
   margin-bottom: 8px;
   overflow: hidden;
@@ -461,6 +463,19 @@ select {
 }
 .label.watched {
   color: var(--watched);
+}
+
+/* Your rating, in the corner of a poster */
+.card-rating {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--overlay);
+  color: var(--accent);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
 }
 
 /* Streaming service logos under a poster */
@@ -648,6 +663,77 @@ select {
 }
 .label-btn.active.watched {
   box-shadow: inset 0 -2px var(--watched);
+}
+
+/* Your rating: three stars. Hovering a star lights it and the ones before it. */
+.rating-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 12px;
+}
+
+.rating-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stars {
+  display: inline-flex;
+}
+
+.star {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--star-off);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.star.on {
+  color: var(--accent);
+}
+
+.stars:hover .star {
+  color: var(--star-off);
+}
+
+.stars .star:hover,
+.stars .star:has(~ .star:hover) {
+  color: var(--accent);
+}
+
+.rating-word {
+  font-size: 0.9rem;
+}
+
+/* "How was it?" after finishing something */
+.rate-prompt {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.rate-prompt p {
+  margin: 0 0 8px;
+}
+
+.rate-prompt .muted {
+  margin: 8px 0 0;
+}
+
+.rate-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rate-stars {
+  color: var(--accent);
 }
 
 /* "What's next" box */

@@ -171,7 +171,10 @@ export function reasonFor(c) {
     (a, b) => b.weight - a.weight || (rank[a.label] ?? 3) - (rank[b.label] ?? 3),
   );
   if (recs.length) {
-    const verb = { watching: "you're watching", planned: 'you saved' }[recs[0].label] || 'you watched';
+    const verb =
+      recs[0].rating === 3
+        ? 'you loved'
+        : { watching: "you're watching", planned: 'you saved' }[recs[0].label] || 'you watched';
     const more = recs.length > 1 ? `, plus ${recs.length - 1} more of your titles` : '';
     return `Because ${verb} ${recs[0].title}${more}`;
   }

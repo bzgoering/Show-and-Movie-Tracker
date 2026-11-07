@@ -1,4 +1,5 @@
 // The Explore page: suggestions based on your library, best match first, filtered to your services.
+import { RATING_NAMES, ratingPrompt } from '../components/rating.js';
 import { providerStrip, whereToWatch } from '../components/where-to-watch.js';
 import { api } from '../lib/api.js';
 import { closeDialog, openDialog } from '../lib/dialog.js';
@@ -8,7 +9,7 @@ import { setSubTab } from '../lib/router.js';
 import { readStored, writeStored } from '../lib/storage.js';
 import { toast } from '../lib/toast.js';
 import { library } from '../library/store.js';
-import { EXPLORE_TABS, mediaKey } from '../../shared/media.js';
+import { EXPLORE_TABS, libraryId, mediaKey } from '../../shared/media.js';
 import { currentSettings, initServices, loadSettings } from './services.js';
 
 const GENRE_KEY = 'exploreGenre'; // the genre filter is remembered for this browser tab
@@ -288,12 +289,23 @@ async function showHiddenList() {
 
 // ---------- Suggestion details ----------
 
+// What you can do with a suggestion. Once it's added as Watched, you're asked how it was.
+function suggestionActions(c) {
+  if (!c.added) {
+    return `<div class="row buttons">
+        <button type="button" class="btn primary explore-add" data-label="planned">Add to Planned</button>
+        <button type="button" class="btn explore-add" data-label="watched">Watched</button>
+        <button type="button" id="explore-dislike" class="btn">Not interested</button>
+      </div>`;
+  }
+  const added = `✓ In your library as ${c.added === 'watched' ? 'Watched' : 'Planned'}`;
+  const rated = c.rating ? ` · Rated ${RATING_NAMES[c.rating]}` : '';
+  const ask = c.added === 'watched' && !c.rating && !c.skipRating;
+  return `<div class="row buttons"><span class="caught-up">${added}${rated}</span></div>
+    ${ask ? ratingPrompt(c.title, { lead: `You've seen ${c.title}.` }) : ''}`;
+}
+
 function suggestionHtml(c) {
-  const actions = c.added
-    ? `<span class="caught-up">✓ In your library as ${c.added === 'watched' ? 'Watched' : 'Planned'}</span>`
-    : `<button type="button" class="btn primary explore-add" data-label="planned">Add to Planned</button>
-       <button type="button" class="btn explore-add" data-label="watched">Watched</button>
-       <button type="button" id="explore-dislike" class="btn">Not interested</button>`;
   return `
     <div class="detail-head">
       <img class="detail-poster" src="${poster(c.posterPath)}" alt="">
@@ -301,7 +313,7 @@ function suggestionHtml(c) {
         <h2 id="detail-title">${esc(c.title)}</h2>
         <p class="muted">${typeYear(c, true)} · ${matchTag(c)}</p>
         <p class="muted small">${esc(c.reason)}</p>
-        <div class="row buttons">${actions}</div>
+        ${suggestionActions(c)}
         ${c.overview ? `<p class="overview">${esc(c.overview)}</p>` : ''}
       </div>
     </div>
@@ -328,11 +340,27 @@ async function addSuggestion(c, button, body) {
   }
 }
 
+async function rateSuggestion(c, rating) {
+  try {
+    await library.update(libraryId(c.type, c.tmdbId), { rating });
+    c.rating = rating;
+    openSuggestion(keyOf(c));
+  } catch (err) {
+    showMessage(err.message);
+  }
+}
+
 const suggestionHandlers = {
   onClick(e) {
     const c = find(state.openKey);
     if (!c) return;
     if (e.target.closest('#explore-dislike')) return notInterested(state.openKey);
+    const rating = e.target.closest('.rate-option');
+    if (rating) return rateSuggestion(c, Number(rating.dataset.rating));
+    if (e.target.closest('.rate-later')) {
+      c.skipRating = true;
+      return openSuggestion(keyOf(c));
+    }
     const add = e.target.closest('.explore-add');
     if (add) addSuggestion(c, add, e.currentTarget);
   },

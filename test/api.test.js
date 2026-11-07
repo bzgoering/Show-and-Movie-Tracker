@@ -377,3 +377,11 @@ test('explore says which tab it showed when the requested one is not available',
   assert.equal(body.tab, 'tv');
   assert.ok(body.items.every((i) => i.type === 'tv'));
 });
+
+test('rating a title and clearing it', async () => {
+  const rated = await call('PATCH', '/api/library/tmdb-tv-1396', { rating: 3 });
+  assert.equal(rated.body.rating, 3);
+  assert.equal((await call('PATCH', '/api/library/tmdb-tv-1396', { rating: 7 })).status, 400);
+  const cleared = await call('PATCH', '/api/library/tmdb-tv-1396', { rating: null });
+  assert.equal('rating' in cleared.body, false);
+});

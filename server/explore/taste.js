@@ -38,7 +38,20 @@ const daysSince = (iso, today) => {
   return Number.isNaN(t) ? 0 : (today - t) / DAY_MS;
 };
 
-// 0..1: how much a library title says you like this kind of thing.
+// Your rating scales how much a title counts. Meh still counts (you liked it, just less than others);
+// Great counts more than a title you finished without rating.
+const RATING_WEIGHT = { 1: 0.6, 2: 1, 3: 1.3 };
+
+// How much a library title says you like this kind of thing: what you did with it (below), scaled by
+// your rating if you gave one. A rating is a clear opinion, so a rated title counts at least as much as
+// one you're partway through, even if you haven't set episodes on it.
+export function affinity(item, options = {}) {
+  const base = engagementAffinity(item, options);
+  const weight = RATING_WEIGHT[item.rating];
+  return weight ? Math.max(base, 0.6) * weight : base;
+}
+
+// 0..1: how much a library title says you like this kind of thing, from what you've done with it.
 //   1     a show you finished, or are caught up on (that includes Waiting)
 //   0.8   a movie you watched (a big commitment, but less than a whole show)
 //   0.45–0.95  a show you're partway through: more the further in you are
@@ -46,7 +59,7 @@ const daysSince = (iso, today) => {
 //         doesn't just hear its own suggestions back)
 //   0.15  a show you seem to have dropped: stuck near the start and untouched for two months
 // `tracksProgress` is false when you never set episodes on any show, so "not started" means nothing.
-export function affinity(item, { today = new Date(), tracksProgress = true } = {}) {
+function engagementAffinity(item, { today = new Date(), tracksProgress = true } = {}) {
   if (item.label === 'planned') return item.addedFrom === 'explore' ? 0.15 : 0.3;
   if (item.type === 'movie') return item.label === 'watched' ? 0.8 : 0.3;
   const e = engagement(item);

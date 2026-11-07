@@ -175,3 +175,14 @@ test('notices when server code changes after starting', async () => {
   await fs.writeFile(file, '// v2'); // e.g. git pull
   assert.equal(isOutdated(), true);
 });
+
+test('ratings: 1-3 saved, null clears, anything else refused', () => {
+  const item = show();
+  assert.equal(applyChanges(item, { rating: 3 }).rating, 3);
+  assert.equal('rating' in applyChanges(item, { rating: null }), false);
+  for (const bad of [0, 4, 2.5, '2', 'great']) {
+    assert.throws(() => applyChanges(show(), { rating: bad }), /Rating must be/);
+  }
+  const movie = applyChanges({ type: 'movie', label: 'planned' }, { rating: 1 });
+  assert.equal(movie.rating, 1, 'any title can be rated, any time');
+});

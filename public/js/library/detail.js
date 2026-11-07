@@ -1,4 +1,5 @@
 // A library title's details: label, episode progress, what's next, and where it streams.
+import { ratingPrompt, ratingRow } from '../components/rating.js';
 import { whereToWatch } from '../components/where-to-watch.js';
 import { closeDialog, openDialog, updateDialog } from '../lib/dialog.js';
 import { $, esc, showText } from '../lib/dom.js';
@@ -17,6 +18,7 @@ import { nextBox } from './release.js';
 import { library } from './store.js';
 
 let openId = null;
+let askRating = null; // the title you just finished, to ask how it was (if you haven't rated it)
 
 const showError = (err) => showText($('#message'), err.message);
 
@@ -135,9 +137,11 @@ function render(item) {
         <h2 id="detail-title">${esc(item.title)}</h2>
         <p class="muted">${item.type === 'tv' ? 'TV show' : 'Movie'}${factText ? ` · ${esc(factText)}` : ''}</p>
         <div class="label-picker" role="group" aria-label="Label">${labels}</div>
+        ${ratingRow(item.rating)}
         ${item.overview ? `<p class="overview">${esc(item.overview)}</p>` : ''}
       </div>
     </div>
+    ${askRating === item.id && !item.rating ? ratingPrompt(item.title) : ''}
     ${statusOf(item) === 'planned' && c.providers ? whereToWatch(c.providers, c.providers.region) : ''}
     ${item.type === 'tv' ? showSections(item) : ''}
     <div class="detail-actions">
@@ -146,7 +150,16 @@ function render(item) {
     </div>`;
 }
 
-const save = (item, changes) => library.update(item.id, changes).catch(showError);
+function save(item, changes) {
+  // Just finished it (marked Watched, or Done on a show) and haven't rated it: ask how it was.
+  if (changes.label === 'watched' && item.label !== 'watched' && !item.rating) askRating = item.id;
+  return library.update(item.id, changes).catch(showError);
+}
+
+function rate(item, rating) {
+  askRating = null;
+  return save(item, { rating });
+}
 
 // Saving progress on a Planned show means you've started it, so it moves to Watching.
 function setProgress(item, progress) {
@@ -161,6 +174,12 @@ async function onClick(e) {
   if (!target) return;
 
   if (target.classList.contains('label-btn')) return save(item, { label: target.dataset.label });
+  if (target.matches('.star, .rate-option')) return rate(item, Number(target.dataset.rating));
+  if (target.classList.contains('clear-rating')) return rate(item, null);
+  if (target.classList.contains('rate-later')) {
+    askRating = null;
+    return updateDialog(render(item));
+  }
 
   const latest = latestAired(item.cache);
   switch (target.id) {
@@ -206,7 +225,14 @@ function onChange(e) {
   if (id === 'ended-toggle') return save(item, { userMarkedEnded: checked });
 }
 
-const handlers = { onClick, onChange, onClose: () => (openId = null) };
+const handlers = {
+  onClick,
+  onChange,
+  onClose() {
+    openId = null;
+    askRating = null; // closing without rating counts as "not now"
+  },
+};
 
 export function openDetail(id) {
   const item = library.find(id);

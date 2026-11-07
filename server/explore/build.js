@@ -231,7 +231,13 @@ export async function buildExplore({
   const jobs = seeds.map(
     (s) => () =>
       cached(`rec:${s.type}:${s.tmdbId}`, 24 * HOURS, () => tmdb.recommendations(s.type, s.tmdbId)).then((list) =>
-        add(list, { key: `${s.type}-${s.tmdbId}`, title: s.title, label: s.label, weight: profile.liking.get(s) }),
+        add(list, {
+          key: `${s.type}-${s.tmdbId}`,
+          title: s.title,
+          label: s.label,
+          rating: s.rating,
+          weight: profile.liking.get(s),
+        }),
       ),
   );
 

@@ -31,6 +31,10 @@ export const SORTS = {
     (a, b) => a - b,
   ),
   release: by(releaseDate, (a, b) => b.localeCompare(a)), // newest first
+  rating: by(
+    (i) => i.rating ?? null,
+    (a, b) => b - a,
+  ), // Great first, unrated last
 };
 
 export function sortItems(items, sort = 'title') {

@@ -1,4 +1,5 @@
 // The Library page: your titles as a poster grid, with tabs, sort, genre picker and search.
+import { ratingBadge } from '../components/rating.js';
 import { providerStrip } from '../components/where-to-watch.js';
 import { $, $$, esc, setSelected, showText } from '../lib/dom.js';
 import { poster } from '../lib/images.js';
@@ -73,6 +74,7 @@ function card(item) {
     <button type="button" class="card" data-id="${esc(item.id)}" title="${esc(item.title)}">
       <div class="poster">
         ${item.posterPath ? `<img src="${poster(item.posterPath)}" alt="" loading="lazy">` : `<div class="no-poster">${esc(item.title)}</div>`}
+        ${ratingBadge(item.rating)}
       </div>
       <div class="card-title">${esc(item.title)}</div>
       <div class="card-meta"><span class="label ${status}">${LABEL_NAMES[status]}</span> · ${esc(cardMeta(item))}</div>
