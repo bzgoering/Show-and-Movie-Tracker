@@ -343,3 +343,13 @@ test('adding from Explore as Watched marks a show caught up and counts as a good
     s.close();
   }
 });
+
+test('explore returns the genres you can filter by, and ignores ones not in your library', async () => {
+  const { body } = await call('GET', '/api/explore');
+  assert.ok(Array.isArray(body.genres) && body.genres.length > 0);
+  assert.equal(body.genre, '');
+  const picked = body.genres[0];
+  assert.equal((await call('GET', `/api/explore?genre=${encodeURIComponent(picked)}`)).body.genre, picked);
+  assert.equal((await call('GET', '/api/explore?genre=Not%20A%20Genre')).body.genre, '', 'unknown genre ignored');
+  assert.equal((await call('GET', '/api/explore?type=movie-animated')).status, 200);
+});

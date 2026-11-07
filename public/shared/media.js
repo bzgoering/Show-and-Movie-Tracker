@@ -12,8 +12,8 @@ export const isMediaType = (type) => Object.hasOwn(LABELS_FOR, type);
 const ENDED_STATUSES = ['Ended', 'Canceled'];
 export const isEndedStatus = (status) => ENDED_STATUSES.includes(status);
 
-// The Explore tabs. Shows are split by TMDB's Animation genre.
-export const EXPLORE_TABS = ['all', 'movie', 'tv-live', 'tv-animated'];
+// The Explore tabs. Movies and shows can be split by TMDB's Animation genre (anime and cartoons).
+export const EXPLORE_TABS = ['all', 'movie', 'movie-live', 'movie-animated', 'tv-live', 'tv-animated'];
 
 // A library item's id, e.g. "tmdb-tv-1396".
 export const libraryId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;

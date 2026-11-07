@@ -66,7 +66,8 @@ Then restart the app (Ctrl+C in its window, then `npm start`). The page picks up
 The **Explore** tab suggests movies and shows you'll probably like, best match first. It looks at which of your titles TMDB recommends things for, the genres and languages you watch, whether you lean toward movies or shows, and ratings.
 
 - Each suggestion shows a match %, why it was suggested (in its details), and where it's streaming. With an empty library it shows what's trending instead, with no %.
-- Tabs for **All**, **Movies**, **Live-action shows** and **Anime & cartoons** (shows TMDB tags as Animation)
+- Tabs for **All**, **Movies**, **Live-action shows** and **Anime & cartoons** (shows TMDB tags as Animation). On **Movies**, pick **All movies**, **Live action** or **Anime & cartoons**.
+- Filter by **genre**. The list only has genres from your own library, with movie and show genres lined up (TV's "Sci-Fi & Fantasy" counts as Science Fiction and Fantasy). Filtering narrows the list but doesn't change anyone's match %, and Explore searches that genre too so the list stays full.
 - Click **Streaming** to pick the services you have, and Explore will only suggest titles on them. Your picks and country are saved in `data/library.json`.
 - Set your country with the Country picker (or `WATCH_REGION` in `.env`, default `US`)
 - Add a suggestion straight from its details: **Add to Planned** to watch later, or **Watched** if you've already seen it (shows are marked caught up)

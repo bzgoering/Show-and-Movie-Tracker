@@ -15,7 +15,13 @@ const CATALOG = {
       year: 2010,
       posterPath: '/inception.jpg',
       overview: 'A thief who steals secrets through dreams.',
-      cache: { status: 'Released', releaseDate: '2010-07-15', originalLanguage: 'en', runtime: 148 },
+      cache: {
+        status: 'Released',
+        releaseDate: '2010-07-15',
+        originalLanguage: 'en',
+        runtime: 148,
+        genres: ['Action', 'Science Fiction'],
+      },
     },
   },
   'tv-1396': {
@@ -34,6 +40,7 @@ const CATALOG = {
       overview: 'A chemistry teacher turns to crime.',
       cache: {
         status: 'Ended',
+        genres: ['Drama', 'Crime'],
         originalLanguage: 'en',
         inProduction: false,
         numberOfSeasons: 5,
@@ -67,6 +74,7 @@ const CATALOG = {
       overview: 'Survivors cross a ruined America.',
       cache: {
         status: 'Returning Series',
+        genres: ['Drama', 'Sci-Fi & Fantasy'],
         originalLanguage: 'en',
         inProduction: true,
         numberOfSeasons: 2,
@@ -112,6 +120,7 @@ const GENRES = {
     [878, 'Science Fiction'],
     [80, 'Crime'],
     [27, 'Horror'],
+    [16, 'Animation'],
   ]),
   tv: new Map([
     [10759, 'Action & Adventure'],
@@ -150,7 +159,11 @@ export const EXPLORE = {
   ],
   'movie-27205': [cand(5, 'movie', 'Interstellar', [878, 18], 8.6), cand(6, 'movie', 'Tenet', [28, 878], 7.2)],
   discover: {
-    movie: [cand(7, 'movie', 'Funny Movie', [35], 6.5), cand(5, 'movie', 'Interstellar', [878, 18], 8.6)],
+    movie: [
+      cand(7, 'movie', 'Funny Movie', [35], 6.5),
+      cand(5, 'movie', 'Interstellar', [878, 18], 8.6),
+      cand(13, 'movie', 'Spirited Away', [16, 878], 8.5, { originalLanguage: 'ja' }),
+    ],
     tv: [
       cand(8, 'tv', 'Sitcom', [35], 7.0),
       cand(9, 'tv', 'Scary Show', [27], 6.0, { posterPath: null }),

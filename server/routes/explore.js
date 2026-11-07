@@ -5,6 +5,7 @@ import {
   buildExplore,
   EXPLORE_TYPES,
   exploreStats,
+  genreOptions,
   recentSuggestion,
   recordFeedback,
   takeBackFeedback,
@@ -21,6 +22,8 @@ export function exploreRoutes({ store, tmdb }) {
       const type = Object.hasOwn(EXPLORE_TYPES, req.query.type ?? '') ? req.query.type : 'all';
       const data = await store.read();
       const settings = settingsOf(data);
+      const genres = genreOptions(data.items, type);
+      const genre = genres.includes(req.query.genre) ? req.query.genre : '';
       const items = await buildExplore({
         tmdb,
         items: data.items,
@@ -29,8 +32,16 @@ export function exploreRoutes({ store, tmdb }) {
         type,
         dislikes: data.dislikes,
         feedback: data.feedback,
+        genre,
       });
-      res.json({ items, ...settings, hidden: data.dislikes.length, stats: exploreStats(data.feedback) });
+      res.json({
+        items,
+        ...settings,
+        genres, // the genres you can filter by (from your library)
+        genre, // the one applied ('' if none, or if the requested one isn't in your library)
+        hidden: data.dislikes.length,
+        stats: exploreStats(data.feedback),
+      });
     }),
   );
 

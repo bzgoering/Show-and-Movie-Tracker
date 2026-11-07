@@ -103,14 +103,35 @@ export function pickSeeds(items, { liking = new Map(), max = 10 } = {}) {
 const ANIMATION = 16;
 export const isAnimated = (c) => (c.genreIds || []).includes(ANIMATION);
 
-// The Explore tabs. Shows are split into live action and anime & cartoons.
+// The Explore tabs. Movies and shows can each be split into live action and anime & cartoons.
 export const EXPLORE_TYPES = {
   all: { types: ['movie', 'tv'] },
   movie: { types: ['movie'] },
+  'movie-live': { types: ['movie'], animated: false },
+  'movie-animated': { types: ['movie'], animated: true },
   tv: { types: ['tv'] },
   'tv-live': { types: ['tv'], animated: false },
   'tv-animated': { types: ['tv'], animated: true },
 };
+
+// The genres Explore can filter by: the ones in your library, A-Z (movie and show genre names aligned,
+// so "Sci-Fi & Fantasy" counts as Science Fiction and Fantasy). On a live-action or anime tab,
+// Animation is left out: it would match nothing or everything there.
+export function genreOptions(items, type = 'all') {
+  const { animated } = EXPLORE_TYPES[type] ?? EXPLORE_TYPES.all;
+  const names = new Set(items.flatMap((item) => normalizeGenres(item.cache?.genres)));
+  if (animated !== undefined) names.delete('Animation');
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
+// An extra discover search when you filter by a genre, so the list stays full: popular titles in
+// that genre (animated or not, to match the tab).
+async function genreQuery(tmdb, type, genre, animated) {
+  const ids = (await genreIdsFor(tmdb, type, [genre])).filter((id) => id !== ANIMATION || genre === 'Animation');
+  if (!ids.length) return null; // e.g. "Thriller" is a movie genre only
+  if (animated === true) return { with_genres: ids.map((id) => `${ANIMATION},${id}`).join('|') };
+  return { with_genres: ids.join('|'), ...(animated === false && { without_genres: String(ANIMATION) }) };
+}
 
 // The discover searches for one type on one tab: popular titles in any of your top 3 genres, and
 // popular titles in both of your top 2 (more specific). Anime & cartoons searches animated titles,
@@ -145,6 +166,7 @@ export async function buildExplore({
   limit = 40,
   dislikes = [],
   feedback = [],
+  genre = '', // only show suggestions in this genre (one of genreOptions)
   today = new Date(),
 }) {
   const profile = tasteProfile(items, { today });
@@ -193,8 +215,9 @@ export async function buildExplore({
   for (const t of types) {
     jobs.push(async () => {
       const queries = await discoverQueries(tmdb, t, profile, animated);
+      if (genre) queries.push(await genreQuery(tmdb, t, genre, animated));
       await Promise.all(
-        queries.map(async (q) => {
+        queries.filter(Boolean).map(async (q) => {
           const params = { ...providerParams, ...q };
           add(await cached(`disc:${t}:${JSON.stringify(params)}`, 12 * HOURS, () => tmdb.discover(t, params)));
         }),
@@ -227,10 +250,13 @@ export async function buildExplore({
       reason: reasonFor(withGenres, profile),
     };
   });
+  // The genre filter only narrows the list; it doesn't change anyone's match %.
+  const inGenre = (c) => !genre || normalizeGenres(c.genres).includes(genre);
   scored.sort((a, b) => b.score - a.score);
+  const matching = scored.filter(inGenre);
 
   // Where to watch, for the best matches only (one request each, cached for a day).
-  const shortlist = scored.slice(0, services.length ? limit * 3 : Math.ceil(limit * 1.5));
+  const shortlist = matching.slice(0, services.length ? limit * 3 : Math.ceil(limit * 1.5));
   await mapLimit(shortlist, 6, async (c) => {
     try {
       c.providers = await cached(`prov:${c.type}:${c.tmdbId}:${region}`, 24 * HOURS, () =>

@@ -5,14 +5,19 @@ import { closeDialog, openDialog } from '../lib/dialog.js';
 import { $, $$, esc, setSelected, showText } from '../lib/dom.js';
 import { poster } from '../lib/images.js';
 import { setSubTab } from '../lib/router.js';
+import { readStored, writeStored } from '../lib/storage.js';
 import { toast } from '../lib/toast.js';
 import { library } from '../library/store.js';
 import { EXPLORE_TABS, mediaKey } from '../../shared/media.js';
 import { currentSettings, initServices, loadSettings } from './services.js';
 
+const GENRE_KEY = 'exploreGenre'; // the genre filter is remembered for this browser tab
+
 const state = {
   tab: 'all',
-  results: new Map(), // tab -> suggestions
+  genre: readStored(sessionStorage, GENRE_KEY, ''), // '' = all genres
+  genres: [], // genres you can filter by (from your library), as the server last sent them
+  results: new Map(), // "tab|genre" -> suggestions
   stale: false, // your library changed since these were loaded
   stats: null, // { added, disliked, tuned }
   hiddenCount: 0,
@@ -22,6 +27,8 @@ const state = {
 const el = {
   grid: $('#explore-grid'),
   tabs: () => $$('.explore-types .chip'),
+  movieKind: $('#movie-kind'),
+  genre: $('#explore-genre'),
   message: $('#explore-message'),
   stats: $('#explore-stats'),
   loading: $('#explore-loading'),
@@ -29,6 +36,9 @@ const el = {
 };
 
 const keyOf = (c) => mediaKey(c.type, c.tmdbId);
+const resultsKey = (tab = state.tab, genre = state.genre) => `${tab}|${genre}`;
+// "movie-live" and "movie-animated" are kinds of movie under the Movies tab.
+const tabGroup = (tab) => (tab.startsWith('movie') ? 'movie' : tab);
 const showMessage = (text) => showText(el.message, text);
 
 function find(key) {
@@ -72,13 +82,33 @@ function card(c) {
     </div>`;
 }
 
+function emptyText() {
+  if (state.genre) return `No ${state.genre} suggestions here yet. Try another genre, or All genres.`;
+  if (currentSettings()?.services.length) {
+    return 'Nothing found on your streaming services. Try adding more services, or more titles to your library.';
+  }
+  return 'No suggestions yet. Add a few movies or shows to your library first.';
+}
+
 function renderResults() {
-  const items = state.results.get(state.tab) ?? [];
+  const items = state.results.get(resultsKey()) ?? [];
   el.grid.innerHTML = items.map(card).join('');
   el.empty.hidden = items.length > 0 || !el.message.hidden;
-  el.empty.textContent = currentSettings()?.services.length
-    ? 'Nothing found on your streaming services. Try adding more services, or more titles to your library.'
-    : 'No suggestions yet. Add a few movies or shows to your library first.';
+  el.empty.textContent = emptyText();
+}
+
+// The genre picker lists the genres in your library; hidden until there are some.
+function renderGenres() {
+  el.genre.innerHTML =
+    '<option value="">All genres</option>' +
+    state.genres.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
+  el.genre.value = state.genre;
+  el.genre.hidden = state.genres.length === 0;
+}
+
+function setGenre(genre) {
+  state.genre = genre;
+  writeStored(sessionStorage, GENRE_KEY, genre);
 }
 
 // "Your picks" line: how often you add what Explore suggests, plus the hidden list.
@@ -103,17 +133,24 @@ async function loadResults() {
     state.results.clear();
     state.stale = false;
   }
-  const tab = state.tab;
-  if (state.results.has(tab)) return renderResults();
+  const { tab, genre } = state;
+  if (state.results.has(resultsKey())) return renderResults();
   el.grid.innerHTML = '';
   el.empty.hidden = true;
   el.loading.hidden = false;
   showMessage('');
   try {
-    const { items, stats, hidden } = await api(`/api/explore?type=${tab}`);
-    state.results.set(tab, items);
-    state.stats = stats;
-    state.hiddenCount = hidden;
+    const query = genre ? `type=${tab}&genre=${encodeURIComponent(genre)}` : `type=${tab}`;
+    const data = await api(`/api/explore?${query}`);
+    // The server drops a genre that doesn't apply here (not in your library, or Animation on an anime tab).
+    state.results.set(resultsKey(tab, data.genre), data.items);
+    state.stats = data.stats;
+    state.hiddenCount = data.hidden;
+    if (tab === state.tab && genre === state.genre) {
+      state.genres = data.genres;
+      if (data.genre !== genre) setGenre(data.genre);
+      renderGenres();
+    }
     renderStats();
   } catch (err) {
     showMessage(`Couldn't load suggestions: ${err.message}`);
@@ -125,7 +162,16 @@ async function loadResults() {
 
 function setTab(tab) {
   state.tab = EXPLORE_TABS.includes(tab) ? tab : 'all';
-  setSelected(el.tabs(), (chip) => chip.dataset.type === state.tab);
+  setSelected(el.tabs(), (chip) => chip.dataset.type === tabGroup(state.tab));
+  el.movieKind.hidden = tabGroup(state.tab) !== 'movie';
+  el.movieKind.value = state.tab;
+}
+
+// Switching tab (or kind of movie) from the page: remember it in the address, then load.
+function changeTab(tab) {
+  setTab(tab);
+  setSubTab('explore', state.tab);
+  loadResults();
 }
 
 // Opens Explore on a tab (from the address, e.g. after a refresh or the Back button).
@@ -287,9 +333,13 @@ export function initExplorePage() {
 
   $('.explore-types').addEventListener('click', (e) => {
     const chip = e.target.closest('.chip');
-    if (!chip) return;
-    setTab(chip.dataset.type);
-    setSubTab('explore', state.tab);
+    if (chip) changeTab(chip.dataset.type);
+  });
+
+  el.movieKind.addEventListener('change', () => changeTab(el.movieKind.value));
+
+  el.genre.addEventListener('change', () => {
+    setGenre(el.genre.value);
     loadResults();
   });
 

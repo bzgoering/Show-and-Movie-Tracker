@@ -79,6 +79,14 @@
           <button type="button" class="chip" data-type="tv-animated">Anime &amp; cartoons</button>
         </nav>
         <div class="list-controls">
+          <select id="movie-kind" aria-label="Kind of movie" hidden>
+            <option value="movie">All movies</option>
+            <option value="movie-live">Live action</option>
+            <option value="movie-animated">Anime &amp; cartoons</option>
+          </select>
+          <select id="explore-genre" aria-label="Genre" hidden>
+            <option value="">All genres</option>
+          </select>
           <button type="button" id="services-btn" class="btn" aria-controls="services-panel" aria-expanded="false">
             Streaming: All services
           </button>
@@ -134,7 +142,14 @@
           ...document.querySelectorAll(view === 'explore' ? '.explore-types .chip' : '#library-view .chip'),
         ];
         const key = view === 'explore' ? 'type' : 'filter';
-        if (chips.some((c) => c.dataset[key] === sub)) select(chips, (c) => c.dataset[key] === sub);
+        // "movie-live" and "movie-animated" belong to the Movies tab.
+        const isTab = (c) => c.dataset[key] === sub || (view === 'explore' && sub.startsWith(`${c.dataset[key]}-`));
+        if (chips.some(isTab)) select(chips, isTab);
+        if (view === 'explore' && sub.startsWith('movie')) {
+          const kind = document.getElementById('movie-kind');
+          kind.hidden = false;
+          kind.value = sub;
+        }
       })();
     </script>
     <script type="module" src="js/main.js"></script>

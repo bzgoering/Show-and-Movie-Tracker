@@ -173,3 +173,55 @@ test('shows split into live action and anime & cartoons', async () => {
   assert.ok(all.some((i) => i.title === 'Arcane') && all.some((i) => i.title === 'Ozark'), 'All still has both');
   assert.equal(isAnimated({ genreIds: [16, 18] }), true);
 });
+
+import { genreOptions } from '../server/explore/index.js';
+
+test('genre options come from your library, with movie and show names aligned', () => {
+  assert.deepEqual(genreOptions(lib), ['Action', 'Crime', 'Drama', 'Fantasy', 'Science Fiction']);
+  const withAnimation = [
+    ...lib,
+    { type: 'tv', tmdbId: 9, label: 'watched', cache: { genres: ['Animation', 'Comedy'] } },
+  ];
+  assert.ok(genreOptions(withAnimation, 'all').includes('Animation'));
+  assert.ok(!genreOptions(withAnimation, 'tv-animated').includes('Animation'), 'implied on anime tabs');
+  assert.ok(!genreOptions(withAnimation, 'movie-live').includes('Animation'), 'impossible on live-action tabs');
+  assert.deepEqual(genreOptions([]), []);
+});
+
+test('movies split into live action and anime & cartoons', async () => {
+  const live = await buildExplore({ tmdb: fake, items: lib, type: 'movie-live' });
+  const toons = await buildExplore({ tmdb: fake, items: lib, type: 'movie-animated' });
+  const all = await buildExplore({ tmdb: fake, items: lib, type: 'movie' });
+  assert.ok(live.length && live.every((i) => i.type === 'movie') && !live.some((i) => i.title === 'Spirited Away'));
+  assert.deepEqual(
+    toons.map((i) => i.title),
+    ['Spirited Away'],
+  );
+  assert.ok(all.some((i) => i.title === 'Spirited Away') && all.some((i) => i.title === 'Interstellar'));
+});
+
+test('the genre filter narrows the list without changing anyone’s match', async () => {
+  const unfiltered = await buildExplore({ tmdb: fake, items: lib });
+  fake.calls.length = 0;
+  const sciFi = await buildExplore({ tmdb: fake, items: lib, genre: 'Science Fiction' });
+  assert.ok(sciFi.length > 0);
+  const titles = sciFi.map((i) => i.title);
+  assert.ok(
+    titles.includes('Interstellar') && titles.includes('Station Eleven'),
+    'movies and shows (Sci-Fi & Fantasy)',
+  );
+  assert.ok(!titles.includes('Ozark') && !titles.includes('Sitcom'), 'other genres left out');
+  for (const s of sciFi) {
+    const same = unfiltered.find((u) => u.title === s.title);
+    if (same) assert.equal(s.match, same.match, `${s.title} keeps its %`);
+  }
+  // An extra search for the genre keeps the list full: Science Fiction on movies, Sci-Fi & Fantasy on shows.
+  const genreSearches = fake.calls.filter((c) => c[0] === 'discover' && /878|10765/.test(c[2].with_genres ?? ''));
+  assert.ok(genreSearches.some((c) => c[1] === 'movie') && genreSearches.some((c) => c[1] === 'tv'));
+});
+
+test('a genre on an anime tab searches animated titles in that genre', async () => {
+  fake.calls.length = 0;
+  await buildExplore({ tmdb: fake, items: lib, type: 'movie-animated', genre: 'Science Fiction' });
+  assert.ok(fake.calls.some((c) => c[0] === 'discover' && c[2].with_genres === '16,878'));
+});

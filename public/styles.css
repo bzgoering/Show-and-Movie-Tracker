@@ -975,10 +975,14 @@ select {
     margin-left: 0;
   }
 
-  .list-controls select,
-  #services-btn {
+  .list-controls select {
     flex: 1 1 0;
     max-width: none;
+  }
+
+  /* On its own row, so the pickers beside it aren't squeezed. */
+  #services-btn {
+    flex: 1 1 100%;
   }
 
   .library-search {
