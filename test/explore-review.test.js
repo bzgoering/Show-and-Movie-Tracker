@@ -66,17 +66,16 @@ test('extra loosely-matching genres do not beat a single genre you like more', (
 });
 
 test('reasons match what you are doing with the title', () => {
-  const p = tasteProfile([{ type: 'tv', label: 'watched', cache: {} }]);
   assert.equal(
-    reasonFor({ recommendedBy: [{ title: 'Severance', label: 'watching', weight: 2.5 }] }, p),
+    reasonFor({ recommendedBy: [{ title: 'Severance', label: 'watching', weight: 2.5 }] }),
     "Because you're watching Severance",
   );
   assert.equal(
-    reasonFor({ recommendedBy: [{ title: 'Dune', label: 'watched', weight: 3 }] }, p),
+    reasonFor({ recommendedBy: [{ title: 'Dune', label: 'watched', weight: 3 }] }),
     'Because you watched Dune',
   );
   assert.equal(
-    reasonFor({ recommendedBy: [{ title: 'Arrival', label: 'planned', weight: 1 }] }, p),
+    reasonFor({ recommendedBy: [{ title: 'Arrival', label: 'planned', weight: 1 }] }),
     'Because you saved Arrival',
   );
 });

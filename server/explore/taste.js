@@ -134,6 +134,5 @@ export function tasteProfile(items, { today = new Date() } = {}) {
     languageKnown, // how many titles have a known language
     // The language most of your anime & cartoons are in, if one clearly leads (e.g. Japanese for anime).
     animatedLanguage: animTotal && animLangW / animTotal >= 0.6 ? animLang : null,
-    empty: items.length === 0,
   };
 }

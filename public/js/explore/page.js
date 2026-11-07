@@ -12,11 +12,23 @@ import { EXPLORE_TABS, mediaKey } from '../../shared/media.js';
 import { currentSettings, initServices, loadSettings } from './services.js';
 
 const GENRE_KEY = 'exploreGenre'; // the genre filter is remembered for this browser tab
+const TABS_KEY = 'exploreTabs'; // which tabs you have, remembered so a refresh shows the right ones at once
+
+function savedTabs() {
+  try {
+    const tabs = JSON.parse(readStored(localStorage, TABS_KEY, 'null'));
+    return Array.isArray(tabs) ? tabs : null;
+  } catch {
+    return null;
+  }
+}
 
 const state = {
   tab: 'all',
   genre: readStored(sessionStorage, GENRE_KEY, ''), // '' = all genres
   genres: [], // genres you can filter by (from your library), as the server last sent them
+  tabs: savedTabs(), // tabs you have, from your library (null until the first load)
+  libraryEmpty: false, // nothing in your library yet: nothing to suggest from
   results: new Map(), // "tab|genre" -> suggestions
   stale: false, // your library changed since these were loaded
   stats: null, // { added, disliked, tuned }
@@ -26,6 +38,7 @@ const state = {
 
 const el = {
   grid: $('#explore-grid'),
+  filters: $('.explore-types'),
   tabs: () => $$('.explore-types .chip'),
   movieKind: $('#movie-kind'),
   genre: $('#explore-genre'),
@@ -51,8 +64,7 @@ function find(key) {
 
 // ---------- Results ----------
 
-// The match % with what it means in words, on hover. With an empty library there's nothing to match
-// against, so the server sends no % and the card says Trending.
+// The match % with what it means in words, on hover.
 function matchMeaning(m) {
   if (m >= 85) return 'Strong match: very likely your kind of thing';
   if (m >= 70) return 'Good match: likely your kind of thing';
@@ -60,10 +72,7 @@ function matchMeaning(m) {
   return 'Long shot: probably not your kind of thing';
 }
 
-const matchTag = (c) =>
-  c.match == null
-    ? '<span class="match">Trending</span>'
-    : `<span class="match" title="${esc(matchMeaning(c.match))}">${c.match}% match</span>`;
+const matchTag = (c) => `<span class="match" title="${esc(matchMeaning(c.match))}">${c.match}% match</span>`;
 
 const typeYear = (c, long = false) =>
   `${c.type === 'tv' ? (long ? 'TV show' : 'TV') : 'Movie'}${c.year ? ` · ${c.year}` : ''}`;
@@ -83,6 +92,7 @@ function card(c) {
 }
 
 function emptyText() {
+  if (state.libraryEmpty) return 'Add a show or movie to your library, and Explore will suggest things you might like.';
   if (state.genre) return `No ${state.genre} suggestions here yet. Try another genre, or All genres.`;
   if (currentSettings()?.services.length) {
     return 'Nothing found on your streaming services. Try adding more services, or more titles to your library.';
@@ -128,13 +138,25 @@ function renderStats() {
   el.stats.hidden = parts.length === 0;
 }
 
+// Shows only the tabs you have (the server works them out from your library). Until the first load,
+// the tabs remembered from last time are used.
+function renderTabs() {
+  if (!state.tabs) return;
+  for (const chip of el.tabs()) chip.hidden = !state.tabs.includes(chip.dataset.type);
+  el.filters.hidden = state.tabs.length === 0;
+  el.movieKind.hidden = tabGroup(state.tab) !== 'movie' || !state.tabs.includes('movie-live');
+}
+
+let latestLoad = 0; // so a slow, older load can't overwrite a newer one
+
 async function loadResults() {
   if (state.stale) {
     state.results.clear();
     state.stale = false;
   }
-  const { tab, genre } = state;
   if (state.results.has(resultsKey())) return renderResults();
+  const load = ++latestLoad;
+  const { tab, genre } = state;
   el.grid.innerHTML = '';
   el.empty.hidden = true;
   el.loading.hidden = false;
@@ -142,29 +164,37 @@ async function loadResults() {
   try {
     const query = genre ? `type=${tab}&genre=${encodeURIComponent(genre)}` : `type=${tab}`;
     const data = await api(`/api/explore?${query}`);
-    // The server drops a genre that doesn't apply here (not in your library, or Animation on an anime tab).
-    state.results.set(resultsKey(tab, data.genre), data.items);
+    // The server may show a different tab (one you have) or drop a genre that doesn't apply here.
+    state.results.set(resultsKey(data.tab ?? tab, data.genre), data.items);
+    state.tabs = data.tabs;
+    writeStored(localStorage, TABS_KEY, JSON.stringify(data.tabs));
+    state.libraryEmpty = data.tabs.length === 0;
     state.stats = data.stats;
     state.hiddenCount = data.hidden;
-    if (tab === state.tab && genre === state.genre) {
+    if (load === latestLoad) {
+      if (data.tab && data.tab !== state.tab) {
+        setTab(data.tab);
+        setSubTab('explore', data.tab);
+      }
       state.genres = data.genres;
-      if (data.genre !== genre) setGenre(data.genre);
+      if (data.genre !== state.genre) setGenre(data.genre);
       renderGenres();
+      renderTabs();
     }
     renderStats();
   } catch (err) {
     showMessage(`Couldn't load suggestions: ${err.message}`);
   } finally {
-    el.loading.hidden = true;
+    if (load === latestLoad) el.loading.hidden = true;
   }
-  if (tab === state.tab) renderResults();
+  if (load === latestLoad) renderResults();
 }
 
 function setTab(tab) {
   state.tab = EXPLORE_TABS.includes(tab) ? tab : 'all';
   setSelected(el.tabs(), (chip) => chip.dataset.type === tabGroup(state.tab));
-  el.movieKind.hidden = tabGroup(state.tab) !== 'movie';
   el.movieKind.value = state.tab;
+  renderTabs();
 }
 
 // Switching tab (or kind of movie) from the page: remember it in the address, then load.
@@ -321,7 +351,10 @@ function openSuggestion(key) {
 export function initExplorePage() {
   // Your library changed (added, removed, relabeled): recompute suggestions the next time they're shown.
   library.onChange((reason) => {
-    if (reason !== 'load') state.stale = true;
+    if (reason === 'load') return;
+    state.stale = true;
+    // Your first title changes everything here: if Explore is open and empty, refresh it straight away.
+    if (state.libraryEmpty && !$('#explore-view').hidden) loadResults();
   });
 
   initServices(({ patch, error }) => {

@@ -3,10 +3,11 @@ import { Router } from 'express';
 import { mediaKey } from '../../public/shared/media.js';
 import {
   buildExplore,
-  EXPLORE_TYPES,
   exploreStats,
+  exploreTabs,
   genreOptions,
   recentSuggestion,
+  resolveTab,
   recordFeedback,
   takeBackFeedback,
 } from '../explore/index.js';
@@ -19,9 +20,13 @@ export function exploreRoutes({ store, tmdb }) {
   router.get(
     '/explore',
     asyncRoute(async (req, res) => {
-      const type = Object.hasOwn(EXPLORE_TYPES, req.query.type ?? '') ? req.query.type : 'all';
       const data = await store.read();
       const settings = settingsOf(data);
+      const tabs = exploreTabs(data.items); // only the kinds of title you have
+      const common = { ...settings, tabs, hidden: data.dislikes.length, stats: exploreStats(data.feedback) };
+      // An empty library has nothing to base suggestions on: the page asks you to add something.
+      if (!tabs.length) return res.json({ ...common, items: [], tab: null, genres: [], genre: '' });
+      const type = resolveTab(req.query.type, tabs);
       const genres = genreOptions(data.items, type);
       const genre = genres.includes(req.query.genre) ? req.query.genre : '';
       const items = await buildExplore({
@@ -35,12 +40,11 @@ export function exploreRoutes({ store, tmdb }) {
         genre,
       });
       res.json({
+        ...common,
         items,
-        ...settings,
+        tab: type, // the tab shown (may differ from the one asked for)
         genres, // the genres you can filter by (from your library)
         genre, // the one applied ('' if none, or if the requested one isn't in your library)
-        hidden: data.dislikes.length,
-        stats: exploreStats(data.feedback),
       });
     }),
   );

@@ -96,10 +96,8 @@ test('type filter and region', async () => {
   );
 });
 
-test('an empty library falls back to popular titles', async () => {
-  const items = await buildExplore({ tmdb: fake, items: [] });
-  assert.ok(items.some((i) => i.title === 'Trending Movie'));
-  assert.equal(items.find((i) => i.title === 'Trending Movie').reason, 'Popular this week');
+test('an empty library gets no suggestions', async () => {
+  assert.deepEqual(await buildExplore({ tmdb: fake, items: [] }), []);
 });
 
 import { DEFAULT_WEIGHTS, dislikeProfile, dislikeScore, exploreStats, learnWeights } from '../server/explore/index.js';
@@ -224,4 +222,43 @@ test('a genre on an anime tab searches animated titles in that genre', async () 
   fake.calls.length = 0;
   await buildExplore({ tmdb: fake, items: lib, type: 'movie-animated', genre: 'Science Fiction' });
   assert.ok(fake.calls.some((c) => c[0] === 'discover' && c[2].with_genres === '16,878'));
+});
+
+import { exploreTabs, resolveTab } from '../server/explore/index.js';
+
+const title = (type, genres = ['Drama']) => ({ type, label: 'watched', cache: { genres } });
+const cartoon = (type) => title(type, ['Animation', 'Comedy']);
+
+test('tabs only appear for the kinds of title you have', () => {
+  assert.deepEqual(exploreTabs([]), [], 'empty library: no tabs');
+  assert.deepEqual(exploreTabs([title('movie')]), ['movie'], 'only movies');
+  assert.deepEqual(exploreTabs([title('tv')]), ['tv'], 'only live-action shows: one Shows tab');
+  assert.deepEqual(exploreTabs([cartoon('tv')]), ['tv'], 'only cartoons: still one Shows tab');
+  assert.deepEqual(exploreTabs([title('movie'), title('tv')]), ['all', 'movie', 'tv']);
+  assert.deepEqual(exploreTabs([title('movie'), title('tv'), cartoon('tv')]), [
+    'all',
+    'movie',
+    'tv-live',
+    'tv-animated',
+  ]);
+  assert.deepEqual(
+    exploreTabs([title('tv'), cartoon('tv')]),
+    ['all', 'tv-live', 'tv-animated'],
+    'both kinds, no movies',
+  );
+  assert.deepEqual(
+    exploreTabs([title('movie'), cartoon('movie')]),
+    ['movie', 'movie-live', 'movie-animated'],
+    'movie kinds',
+  );
+});
+
+test('a tab you do not have falls back to the closest one you do', () => {
+  const oneKind = ['all', 'movie', 'tv'];
+  assert.equal(resolveTab('tv-animated', oneKind), 'tv');
+  assert.equal(resolveTab('movie-live', oneKind), 'movie');
+  assert.equal(resolveTab('tv', ['all', 'movie', 'tv-live', 'tv-animated']), 'tv-live');
+  assert.equal(resolveTab('all', ['movie']), 'movie');
+  assert.equal(resolveTab(undefined, oneKind), 'all');
+  assert.equal(resolveTab('nonsense', oneKind), 'all');
 });

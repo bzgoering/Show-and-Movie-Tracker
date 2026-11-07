@@ -75,6 +75,7 @@
         <nav class="filters explore-types" aria-label="Suggestion type">
           <button type="button" class="chip active" data-type="all">All</button>
           <button type="button" class="chip" data-type="movie">Movies</button>
+          <button type="button" class="chip" data-type="tv" hidden>Shows</button>
           <button type="button" class="chip" data-type="tv-live">Live-action shows</button>
           <button type="button" class="chip" data-type="tv-animated">Anime &amp; cartoons</button>
         </nav>
@@ -145,10 +146,21 @@
         // "movie-live" and "movie-animated" belong to the Movies tab.
         const isTab = (c) => c.dataset[key] === sub || (view === 'explore' && sub.startsWith(`${c.dataset[key]}-`));
         if (chips.some(isTab)) select(chips, isTab);
-        if (view === 'explore' && sub.startsWith('movie')) {
-          const kind = document.getElementById('movie-kind');
-          kind.hidden = false;
-          kind.value = sub;
+        if (view === 'explore') {
+          // Only the tabs you have (remembered from last time; the app checks again a moment later).
+          let tabs = null;
+          try {
+            tabs = JSON.parse(localStorage.getItem('exploreTabs'));
+          } catch {}
+          if (Array.isArray(tabs)) {
+            chips.forEach((c) => (c.hidden = !tabs.includes(c.dataset.type)));
+            document.querySelector('.explore-types').hidden = tabs.length === 0;
+          }
+          if (sub.startsWith('movie') && (!Array.isArray(tabs) || tabs.includes('movie-live'))) {
+            const kind = document.getElementById('movie-kind');
+            kind.hidden = false;
+            kind.value = sub;
+          }
         }
       })();
     </script>

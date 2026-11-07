@@ -83,7 +83,6 @@ const BASELINE = 0.1;
 //  - Titles like ones you hid lose up to 12 points.
 export function scoreCandidate(c, profile, { weights = DEFAULT_WEIGHTS, dprofile = null } = {}) {
   const parts = scoreParts(c, profile);
-  if (profile.empty) return 0.6 * parts.quality + 0.4 * Math.min(1, (c.popularity || 0) / 200);
   const m = Object.fromEntries(
     Object.keys(DEFAULT_WEIGHTS).map((k) => [k, (weights[k] ?? DEFAULT_WEIGHTS[k]) / DEFAULT_WEIGHTS[k]]),
   );
@@ -165,7 +164,7 @@ export function dislikeScore(c, dprofile) {
 }
 
 // A short, human reason for a suggestion.
-export function reasonFor(c, profile) {
+export function reasonFor(c) {
   // The title that says most about your taste; between equals, one you finished reads best.
   const rank = { watched: 0, watching: 1, planned: 2 };
   const recs = [...(c.recommendedBy || [])].sort(
@@ -176,6 +175,5 @@ export function reasonFor(c, profile) {
     const more = recs.length > 1 ? `, plus ${recs.length - 1} more of your titles` : '';
     return `Because ${verb} ${recs[0].title}${more}`;
   }
-  if (profile.empty) return 'Popular this week';
   return `Popular with ${c.type === 'movie' ? 'movies' : 'shows'} like yours`;
 }

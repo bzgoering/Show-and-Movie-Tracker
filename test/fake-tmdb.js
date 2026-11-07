@@ -170,7 +170,6 @@ export const EXPLORE = {
       cand(12, 'tv', 'Frieren', [16, 10759, 10765], 8.9, { originalLanguage: 'ja' }),
     ],
   },
-  trending: [cand(10, 'movie', 'Trending Movie', [28], 7.5)],
 };
 const NETFLIX = { id: 8, name: 'Netflix', logoPath: '/netflix.jpg' };
 const MAX = { id: 1899, name: 'Max', logoPath: '/max.jpg' };
@@ -186,9 +185,6 @@ export async function recommendations(type, tmdbId) {
 export async function discover(type, params) {
   calls.push(['discover', type, params]);
   return structuredClone(EXPLORE.discover[type]);
-}
-export async function trending() {
-  return structuredClone(EXPLORE.trending);
 }
 export async function watchProviders(type, tmdbId, region) {
   if (region !== 'US') return { link: null, stream: [], rent: [], buy: [] };

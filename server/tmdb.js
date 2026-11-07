@@ -212,13 +212,6 @@ export async function discover(type, params = {}) {
   return (data.results || []).map((r) => toCandidate(r, type));
 }
 
-export async function trending() {
-  const data = await request('/trending/all/week');
-  return (data.results || [])
-    .filter((r) => r.media_type === 'movie' || r.media_type === 'tv')
-    .map((r) => toCandidate(r));
-}
-
 const toProvider = (p) => ({ id: p.provider_id, name: p.provider_name, logoPath: p.logo_path || null });
 
 // Where a title can be watched in one country (data from JustWatch, via TMDB).

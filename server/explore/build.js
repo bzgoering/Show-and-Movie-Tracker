@@ -114,6 +114,36 @@ export const EXPLORE_TYPES = {
   'tv-animated': { types: ['tv'], animated: true },
 };
 
+// Which Explore tabs you have. A tab only appears once your library has that kind of title:
+//   Movies              if you have movies
+//   Shows               if your shows are all live action, or all animated
+//   Live-action shows + Anime & cartoons   once you have both kinds of show
+//   All                 when there's more than one of the above
+// Movies also get "movie-live" and "movie-animated" (the kind-of-movie picker) once you have both kinds.
+export function exploreTabs(items) {
+  const movies = items.filter((i) => i.type === 'movie');
+  const shows = items.filter((i) => i.type === 'tv');
+  const both = (list) => {
+    const animated = list.filter(isAnimatedItem).length;
+    return animated > 0 && animated < list.length;
+  };
+  const top = [];
+  if (movies.length) top.push('movie');
+  if (shows.length) top.push(...(both(shows) ? ['tv-live', 'tv-animated'] : ['tv']));
+  const tabs = top.length > 1 ? ['all', ...top] : top;
+  if (both(movies)) tabs.push('movie-live', 'movie-animated');
+  return tabs;
+}
+
+// The tab to show: the one asked for if you have it, otherwise the closest one you do have
+// (e.g. an old link to Anime & cartoons opens Shows when your shows are all one kind).
+export function resolveTab(requested = '', tabs) {
+  if (tabs.includes(requested)) return requested;
+  if (requested.startsWith('movie') && tabs.includes('movie')) return 'movie';
+  if (requested.startsWith('tv')) return tabs.find((t) => t === 'tv' || t === 'tv-live') ?? tabs[0];
+  return tabs[0];
+}
+
 // The genres Explore can filter by: the ones in your library, A-Z (movie and show genre names aligned,
 // so "Sci-Fi & Fantasy" counts as Science Fiction and Fantasy). On a live-action or anime tab,
 // Animation is left out: it would match nothing or everything there.
@@ -169,6 +199,7 @@ export async function buildExplore({
   genre = '', // only show suggestions in this genre (one of genreOptions)
   today = new Date(),
 }) {
+  if (!items.length) return []; // nothing to base suggestions on
   const profile = tasteProfile(items, { today });
   const dprofile = dislikeProfile(items, dislikes, { today });
   const weights = learnWeights(feedback);
@@ -224,7 +255,6 @@ export async function buildExplore({
       );
     });
   }
-  if (profile.empty) jobs.push(async () => add(await cached('trending', 6 * HOURS, () => tmdb.trending())));
 
   // Titles TMDB considers similar to your most recent "Not interested" picks.
   const similarToDisliked = new Map();
@@ -247,7 +277,7 @@ export async function buildExplore({
     return {
       ...withGenres,
       score: scoreCandidate(withGenres, profile, { weights, dprofile }),
-      reason: reasonFor(withGenres, profile),
+      reason: reasonFor(withGenres),
     };
   });
   // The genre filter only narrows the list; it doesn't change anyone's match %.
@@ -267,12 +297,11 @@ export async function buildExplore({
     }
   });
 
-  // With an empty library there's nothing to match against, so no % is shown (the page says "Trending").
   const wanted = new Set(services.map(Number));
   const picks = shortlist
     .filter((c) => !wanted.size || c.providers.stream.some((p) => wanted.has(p.id)))
     .slice(0, limit)
-    .map((c) => ({ ...c, match: profile.empty ? null : matchFor(c.score, shift) }));
+    .map((c) => ({ ...c, match: matchFor(c.score, shift) }));
 
   for (const c of picks) {
     recent.set(keyOf(c), {

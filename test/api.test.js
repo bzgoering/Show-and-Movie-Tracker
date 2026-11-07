@@ -353,3 +353,27 @@ test('explore returns the genres you can filter by, and ignores ones not in your
   assert.equal((await call('GET', '/api/explore?genre=Not%20A%20Genre')).body.genre, '', 'unknown genre ignored');
   assert.equal((await call('GET', '/api/explore?type=movie-animated')).status, 200);
 });
+
+test('explore with an empty library returns no suggestions and no tabs', async () => {
+  const f = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'tracker-empty-')), 'library.json');
+  const store = createStore(f);
+  await store.init();
+  const s = createApp({ store, tmdb: fakeTmdb }).listen(0);
+  await new Promise((r) => s.once('listening', r));
+  try {
+    const body = await (await fetch(`http://localhost:${s.address().port}/api/explore`)).json();
+    assert.deepEqual(body.items, []);
+    assert.deepEqual(body.tabs, []);
+    assert.equal(body.tab, null);
+  } finally {
+    s.close();
+  }
+});
+
+test('explore says which tab it showed when the requested one is not available', async () => {
+  // This library has no cartoons, so Anime & cartoons falls back to plain Shows.
+  const { body } = await call('GET', '/api/explore?type=tv-animated');
+  assert.ok(!body.tabs.includes('tv-animated'));
+  assert.equal(body.tab, 'tv');
+  assert.ok(body.items.every((i) => i.type === 'tv'));
+});

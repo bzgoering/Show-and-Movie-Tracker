@@ -163,7 +163,6 @@ function fakeTmdb(recs = {}, disc = {}) {
     genreMap: async (type) => GENRES[type],
     recommendations: async (type, id) => (calls.push(['rec', type, id]), structuredClone(recs[`${type}-${id}`] || [])),
     discover: async (type, params) => (calls.push(['discover', type, params]), structuredClone(disc[type] || [])),
-    trending: async () => [cand(900, 'movie', 'Trending Movie', [28], 7.5, { popularity: 300 })],
     watchProviders: async () => ({ link: null, stream: [], rent: [], buy: [] }),
   };
 }
@@ -271,13 +270,9 @@ test('a title shows the same match on every tab it appears on', async () => {
   assert.equal(pct(anime, 'Anime'), pct(all, 'Anime'));
 });
 
-test('a new user with one saved title gets modest matches; an empty library shows no % at all', async () => {
+test('a new user with one saved title gets modest matches', async () => {
   const one = await buildExplore({ tmdb: crimeTmdb(), items: [show(1, 'Breaking Bad', 'planned')], today: TODAY });
   assert.ok(pct(one, 'Peaky Blinders') <= 50, `one saved title is thin evidence: ${pct(one, 'Peaky Blinders')}%`);
-  const none = await buildExplore({ tmdb: crimeTmdb(), items: [], today: TODAY });
-  const trending = none.find((c) => c.title === 'Trending Movie');
-  assert.equal(trending.match, null, 'nothing to match against');
-  assert.equal(trending.reason, 'Popular this week');
 });
 
 test('an old library file without genres or languages still gets sensible matches', async () => {
@@ -396,13 +391,12 @@ test('learning ignores signals that old feedback did not record', () => {
 });
 
 test('reasons mention how many of your titles point to a suggestion, leading with one you finished', () => {
-  const p = tasteProfile([], { today: TODAY });
   const recs = [
     { title: 'Ozark', label: 'watching', weight: 1 },
     { title: 'Breaking Bad', label: 'watched', weight: 1 },
     { title: 'Narcos', label: 'planned', weight: 0.3 },
   ];
-  assert.equal(reasonFor({ recommendedBy: recs }, p), 'Because you watched Breaking Bad, plus 2 more of your titles');
+  assert.equal(reasonFor({ recommendedBy: recs }), 'Because you watched Breaking Bad, plus 2 more of your titles');
 });
 
 test('feedback saves the score behind the match, for the feedback check', async () => {

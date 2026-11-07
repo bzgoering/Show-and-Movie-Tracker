@@ -69,7 +69,8 @@ export function initSearch() {
     if (!query) return hide();
     timer = setTimeout(() => search(query), DEBOUNCE_MS);
   });
-  input.addEventListener('keydown', (e) => e.key === 'Escape' && hide());
+  // Esc closes the results, wherever focus is (e.g. after clicking Add). The details pop-up handles its own Esc.
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && !results.hidden && hide());
   document.addEventListener('click', (e) => !e.target.closest('.search') && hide());
   results.addEventListener('click', (e) => {
     const button = e.target.closest('.add');
