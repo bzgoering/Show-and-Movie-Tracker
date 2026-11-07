@@ -1,5 +1,6 @@
 // The match %: how strongly your library points at a suggestion, and a short reason why.
-import { normalizeGenres, tasteProfile } from './taste.js';
+import { normalizeGenres } from '../../public/shared/media.js';
+import { tasteProfile } from './taste.js';
 
 // Drama is TMDB's catch-all (about half of all titles have it), so it says less about a title.
 const GENRE_SPECIFICITY = { Drama: 0.5 };

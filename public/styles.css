@@ -1,7 +1,7 @@
 /* ==========================================================================
    Show & Movie Tracker
    1. Tokens  2. Base  3. Layout  4. Controls  5. Cards  6. Details pop-up
-   7. Explore  8. Feedback (messages, toast)  9. Small screens
+   7. Explore  8. Account (stats)  9. Feedback (messages, toast)  10. Small screens
    ========================================================================== */
 
 /* ---------- 1. Tokens ---------- */
@@ -973,7 +973,110 @@ select {
   outline-offset: 2px;
 }
 
-/* ---------- 8. Feedback ---------- */
+/* ---------- 8. Account (stats) ---------- */
+
+#account-view {
+  max-width: 880px;
+}
+
+.page-title {
+  margin: 4px 0 4px;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.section-title {
+  margin: 32px 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Headline numbers: a label, the value, and an optional line under it. */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tiles.hero .stat-value {
+  font-size: 1.9rem;
+  line-height: 1.2;
+}
+
+.stat-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.section-title + .stat-tiles {
+  margin-top: 0;
+}
+
+/* Genres as ranked bars: name, bar, time. */
+.bar-list {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.bar-list li {
+  display: grid;
+  grid-template-columns: minmax(90px, 160px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.bar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 8px;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+
+.bar-value {
+  min-width: 4.5em;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- 9. Feedback ---------- */
 
 .message {
   padding: 8px 12px;
@@ -999,7 +1102,7 @@ select {
   transform: translateX(-50%);
 }
 
-/* ---------- 9. Small screens ---------- */
+/* ---------- 10. Small screens ---------- */
 
 @media (max-width: 600px) {
   :root {
@@ -1121,5 +1224,27 @@ select {
   .label-btn {
     flex: 1;
     padding: 5px 6px;
+  }
+
+  .stat-tiles {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .stat-tiles.hero .stat-tile:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .stat-tiles.ratings {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .stat-tile {
+    padding: 10px 12px;
+  }
+
+  .bar-list li {
+    grid-template-columns: minmax(70px, 110px) 1fr auto;
+    gap: 8px;
   }
 }

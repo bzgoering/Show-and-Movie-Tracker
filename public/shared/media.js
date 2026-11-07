@@ -30,3 +30,14 @@ export const libraryId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;
 
 // A title's key in Explore and in the hidden list, e.g. "tv-1396".
 export const mediaKey = (type, tmdbId) => `${type}-${tmdbId}`;
+
+// TMDB names TV genres differently ("Sci-Fi & Fantasy" vs "Science Fiction"), so split and align them.
+export function normalizeGenres(names = []) {
+  const out = new Set();
+  for (const name of names) {
+    for (const part of String(name).split(' & ')) out.add(part === 'Sci-Fi' ? 'Science Fiction' : part.trim());
+  }
+  return [...out];
+}
+
+export const isAnimatedTitle = (item) => normalizeGenres(item.cache?.genres).includes('Animation');

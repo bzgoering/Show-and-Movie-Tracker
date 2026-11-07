@@ -1,11 +1,13 @@
-// Keeps the page and sub-tab in the address, e.g. #library/watching or #explore/tv-animated, so a refresh
+// Keeps the page and sub-tab in the address, e.g. #library/watching, #explore/tv-animated or #account, so a refresh
 // reopens exactly where you were. Switching pages adds a browser history entry (so Back works);
 // switching sub-tabs just updates the address. (index.html reads the same format before the first paint.)
 import { readStored, writeStored } from './storage.js';
 
+const PAGES = ['library', 'explore', 'account'];
+
 export function readRoute() {
   const [view, sub] = location.hash.slice(1).split('/');
-  return { view: view === 'explore' ? 'explore' : 'library', sub: sub || 'all' };
+  return { view: PAGES.includes(view) ? view : 'library', sub: sub || 'all' };
 }
 
 const hashFor = (view, sub) => (sub && sub !== 'all' ? `#${view}/${sub}` : `#${view}`);
@@ -13,7 +15,7 @@ const hashFor = (view, sub) => (sub && sub !== 'all' ? `#${view}/${sub}` : `#${v
 // The last sub-tab seen on each page, so coming back to a page reopens its tab, even after a refresh.
 // Kept for this browser tab only.
 const STORAGE_KEY = 'lastSubTabs';
-const lastSub = { library: 'all', explore: 'all' };
+const lastSub = { library: 'all', explore: 'all', account: 'all' };
 try {
   Object.assign(lastSub, JSON.parse(readStored(sessionStorage, STORAGE_KEY, '{}')));
 } catch {

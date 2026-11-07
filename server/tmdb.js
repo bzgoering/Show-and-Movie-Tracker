@@ -110,6 +110,7 @@ export async function getDetails(type, tmdbId) {
         firstAirDate: t.first_air_date || null,
         genres: (t.genres || []).map((g) => g.name), // for the genre picker and Explore (never shown on cards)
         originalLanguage: t.original_language || null, // e.g. "ja"; Explore uses it to learn what you watch
+        episodeRuntime: typicalEpisodeRuntime(t), // minutes, for your stats
         inProduction: Boolean(t.in_production),
         numberOfSeasons: t.number_of_seasons || 0,
         numberOfEpisodes: t.number_of_episodes || 0,
@@ -132,6 +133,14 @@ export async function getDetails(type, tmdbId) {
   }
 
   throw new TmdbError(`Unknown type "${type}".`, 400);
+}
+
+// A show's typical episode length in minutes: TMDB's listed run time if it has one (older shows),
+// otherwise the length of the latest or next episode. Null if TMDB doesn't say.
+function typicalEpisodeRuntime(t) {
+  const listed = (t.episode_run_time || []).filter((n) => n > 0);
+  if (listed.length) return Math.round(listed.reduce((a, b) => a + b, 0) / listed.length);
+  return t.last_episode_to_air?.runtime || t.next_episode_to_air?.runtime || null;
 }
 
 async function getSeasonEpisodes(tmdbId, season) {

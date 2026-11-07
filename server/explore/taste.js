@@ -1,19 +1,10 @@
 // What your library says about your taste: how much each title counts (a show you finished says a lot,
 // one you stopped early on says little), the genres and languages you watch, and whether you lean
 // to movies or shows.
-import { ratingOf } from '../../public/shared/media.js';
+import { normalizeGenres, ratingOf } from '../../public/shared/media.js';
 import { airedCount, latestAired, watchedCount } from '../../public/shared/progress.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-// TMDB names TV genres differently ("Sci-Fi & Fantasy" vs "Science Fiction"), so split and align them.
-export function normalizeGenres(names = []) {
-  const out = new Set();
-  for (const name of names) {
-    for (const part of String(name).split(' & ')) out.add(part === 'Sci-Fi' ? 'Science Fiction' : part.trim());
-  }
-  return [...out];
-}
 
 // ---------- How much each library title says about your taste ----------
 
@@ -78,8 +69,6 @@ function engagementAffinity(item, { today = new Date(), tracksProgress = true } 
   const liking = 0.45 + 0.5 * depth;
   return depth < 0.6 && idle > 180 ? liking * 0.75 : liking; // left halfway for half a year
 }
-
-export const isAnimatedItem = (item) => normalizeGenres(item.cache?.genres).includes('Animation');
 
 // Normalises so the biggest value is 1. Rounded so tiny floating-point noise doesn't matter.
 function normalize(map) {

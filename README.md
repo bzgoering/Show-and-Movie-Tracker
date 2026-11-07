@@ -106,6 +106,18 @@ How it's worked out:
 
 Streaming info comes from [JustWatch](https://www.justwatch.com/) through TMDB.
 
+## Account
+
+There's nothing to sign in to, since your library lives on your own computer. The **Account** tab is where your stats are:
+
+- **Time spent watching**: all time, shows and movies, worked out from TMDB run times. A show counts every episode up to the one you're on (all aired episodes once it's Watched), and a movie counts once it's Watched. Planned titles don't count.
+- If TMDB doesn't list a run time, a typical length is used instead (45 minutes an episode, 24 for anime and cartoons, 110 for a movie), and the page says how many titles were estimated
+- How many titles are under each Library tab (Watching, Waiting, Planned, Watched)
+- How many titles you've rated Great, Good and Meh
+- The genres you've spent the most time with. A title counts toward each of its genres, so these add up to more than your total.
+
+The numbers update as you change your library. Episode lengths for shows you already had are filled in the next time the app starts.
+
 ## Development
 
 | Command          | What it does                                                        |
@@ -133,10 +145,11 @@ server/
   store.js            reads and writes data/library.json safely
 public/
   index.html, styles.css
-  shared/             code used by both the page and the server (episode progress, labels)
+  shared/             code used by both the page and the server (episode progress, labels, stats)
   js/main.js          starts the page
   js/library/         the Library page: store.js (your library in the browser), page.js, detail.js
   js/explore/         the Explore page and its streaming-services panel
+  js/account/         the Account page (your stats)
   js/lib/             small helpers (API calls, dates, the router, the details pop-up)
 test/                 node:test tests, with a fake TMDB in fake-tmdb.js
 ```

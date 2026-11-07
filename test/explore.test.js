@@ -1,12 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  buildExplore,
-  clearExploreCache,
-  normalizeGenres,
-  scoreCandidate,
-  tasteProfile,
-} from '../server/explore/index.js';
+import { buildExplore, clearExploreCache, scoreCandidate, tasteProfile } from '../server/explore/index.js';
+import { normalizeGenres } from '../public/shared/media.js';
 import * as fake from './fake-tmdb.js';
 
 beforeEach(() => clearExploreCache());

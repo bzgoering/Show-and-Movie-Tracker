@@ -9,7 +9,7 @@
 //    kinds of title you rarely watch. The match % is that score, so it means the same thing on every tab.
 // 4. Look up where the best ones stream, and return them best match first.
 
-import { mediaKey, ratingOf } from '../../public/shared/media.js';
+import { isAnimatedTitle, mediaKey, normalizeGenres, ratingOf } from '../../public/shared/media.js';
 import { mapLimit } from '../http.js';
 import {
   calibrationShift,
@@ -21,7 +21,7 @@ import {
   scoreCandidate,
   scoreParts,
 } from './score.js';
-import { isAnimatedItem, normalizeGenres, tasteProfile } from './taste.js';
+import { tasteProfile } from './taste.js';
 
 // TMDB answers are cached for a while. The promise itself is cached, so requests that arrive together
 // share one fetch; failures are dropped so they're retried; expired entries are swept as the cache grows.
@@ -89,8 +89,8 @@ export function pickSeeds(items, { liking = new Map(), max = 10 } = {}) {
   const shows = usable.filter((i) => i.type === 'tv');
   const movies = usable.filter((i) => i.type === 'movie');
   const [showSlots, movieSlots] = shareSlots(max, shows, movies, shareOf(shows, usable), 4);
-  const live = shows.filter((i) => !isAnimatedItem(i));
-  const animated = shows.filter(isAnimatedItem);
+  const live = shows.filter((i) => !isAnimatedTitle(i));
+  const animated = shows.filter(isAnimatedTitle);
   const [liveSlots, animSlots] = shareSlots(showSlots, live, animated, shareOf(live, shows), 3);
   return [
     ...pickMix(live, liveSlots, like),
@@ -124,7 +124,7 @@ export function exploreTabs(items) {
   const movies = items.filter((i) => i.type === 'movie');
   const shows = items.filter((i) => i.type === 'tv');
   const both = (list) => {
-    const animated = list.filter(isAnimatedItem).length;
+    const animated = list.filter(isAnimatedTitle).length;
     return animated > 0 && animated < list.length;
   };
   const top = [];

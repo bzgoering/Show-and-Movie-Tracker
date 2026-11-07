@@ -204,3 +204,14 @@ test('recommendations become candidates with genre ids and ratings', async () =>
     { id: 5, type: 'tv', title: 'Rec Show', year: 2021, genres: [18], lang: 'ja', vote: 8.1 },
   );
 });
+
+test('shows save a typical episode length for your stats', async () => {
+  stub({ '/3/tv/1': { ...show, episode_run_time: [42, 46] }, '/3/tv/1/season/2': weeklySeason });
+  assert.equal((await tmdb.getDetails('tv', 1)).cache.episodeRuntime, 44);
+  stub({
+    '/3/tv/1': { ...show, episode_run_time: [], last_episode_to_air: { ...show.last_episode_to_air, runtime: 58 } },
+  });
+  assert.equal((await tmdb.getDetails('tv', 1)).cache.episodeRuntime, 58, 'newer shows list it per episode');
+  stub({ '/3/tv/1': { ...show, episode_run_time: [] } });
+  assert.equal((await tmdb.getDetails('tv', 1)).cache.episodeRuntime, null);
+});

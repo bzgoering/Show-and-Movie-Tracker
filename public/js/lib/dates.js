@@ -44,3 +44,21 @@ export function longWhen(iso) {
   const relative = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days > 1 ? `in ${days} days` : '';
   return relative ? `${date} · ${relative}` : date;
 }
+
+// "45m", "12h 30m", or "1,234h" for long totals.
+export function formatDuration(minutes) {
+  const total = Math.round(minutes);
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hours === 0) return `${mins}m`;
+  if (hours >= 100) return `${Math.round(total / 60).toLocaleString()}h`; // minutes stop mattering
+  return mins ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+// "about 3 days" for totals of a day or more, otherwise ''.
+export function aboutDays(minutes) {
+  const days = minutes / (60 * 24);
+  if (days < 1) return '';
+  const shown = days < 10 ? Math.round(days * 10) / 10 : Math.round(days);
+  return `about ${shown.toLocaleString()} day${shown === 1 ? '' : 's'}`;
+}

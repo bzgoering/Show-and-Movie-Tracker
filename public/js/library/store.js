@@ -4,6 +4,7 @@
 import { api } from '../lib/api.js';
 
 const items = [];
+let loaded = false;
 const events = new EventTarget();
 
 const emit = (reason) => events.dispatchEvent(new CustomEvent('change', { detail: reason }));
@@ -18,14 +19,16 @@ function put(item, reason) {
 
 export const library = {
   items: () => items,
+  loaded: () => loaded, // false until the first load finishes
   find: (id) => items.find((item) => item.id === id),
   onChange: (handler) => events.addEventListener('change', (e) => handler(e.detail)),
 
   // Loads the library (the server refreshes it from TMDB first). Returns the refresh summary, and
   // whether the server needs restarting to pick up an update.
   async load() {
-    const { items: loaded, sync, restartNeeded } = await api('/api/library');
-    items.splice(0, items.length, ...loaded);
+    const { items: fresh, sync, restartNeeded } = await api('/api/library');
+    items.splice(0, items.length, ...fresh);
+    loaded = true;
     emit('load');
     return { sync, restartNeeded };
   },

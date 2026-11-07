@@ -18,6 +18,7 @@
       <nav class="views" aria-label="Pages">
         <button type="button" class="view-tab active" data-view="library" aria-pressed="true">Library</button>
         <button type="button" class="view-tab" data-view="explore" aria-pressed="false">Explore</button>
+        <button type="button" class="view-tab" data-view="account" aria-pressed="false">Account</button>
       </nav>
       <div class="search">
         <input
@@ -118,6 +119,14 @@
       <p class="attribution">Suggestions and streaming info from TMDB. Streaming data provided by JustWatch.</p>
     </main>
 
+    <main id="account-view" hidden>
+      <h2 class="page-title">Your stats</h2>
+      <p class="muted small">
+        There's nothing to sign in to: your library is saved on this computer, and everything here comes from it.
+      </p>
+      <div id="account-content"></div>
+    </main>
+
     <div id="toast" class="toast" role="status" hidden></div>
 
     <dialog id="detail" class="detail" aria-labelledby="detail-title">
@@ -130,7 +139,7 @@
       // the Library first. Same address format as js/lib/router.js; the app takes over a moment later.
       (() => {
         const [first, second] = location.hash.slice(1).split('/');
-        const view = first === 'explore' ? 'explore' : 'library';
+        const view = ['explore', 'account'].includes(first) ? first : 'library';
         const sub = second || 'all';
         const select = (buttons, isOn) =>
           buttons.forEach((b) => {
@@ -139,7 +148,9 @@
           });
         document.getElementById('library-view').hidden = view !== 'library';
         document.getElementById('explore-view').hidden = view !== 'explore';
+        document.getElementById('account-view').hidden = view !== 'account';
         select(document.querySelectorAll('.view-tab'), (b) => b.dataset.view === view);
+        if (view === 'account') return; // no tabs on the Account page
         const chips = [
           ...document.querySelectorAll(view === 'explore' ? '.explore-types .chip' : '#library-view .chip'),
         ];
