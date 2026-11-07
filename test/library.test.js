@@ -183,6 +183,23 @@ test('ratings: 1-3 saved, null clears, anything else refused', () => {
   for (const bad of [0, 4, 2.5, '2', 'great']) {
     assert.throws(() => applyChanges(show(), { rating: bad }), /Rating must be/);
   }
-  const movie = applyChanges({ type: 'movie', label: 'planned' }, { rating: 1 });
-  assert.equal(movie.rating, 1, 'any title can be rated, any time');
+  const movie = applyChanges({ type: 'movie', label: 'watched' }, { rating: 1 });
+  assert.equal(movie.rating, 1, 'any title you have seen can be rated, any time');
+});
+
+test('titles in Planned cannot be rated; an earlier rating is kept but hidden', async () => {
+  const { ratingOf } = await import('../public/shared/media.js');
+  assert.throws(() => applyChanges({ type: 'movie', label: 'planned' }, { rating: 2 }), /Planned can't be rated/);
+  assert.equal(
+    applyChanges({ type: 'movie', label: 'planned' }, { label: 'watched', rating: 2 }).rating,
+    2,
+    'rated as it leaves Planned',
+  );
+  const item = applyChanges({ type: 'tv', label: 'watched', cache: {} }, { rating: 3 });
+  applyChanges(item, { label: 'planned' }); // moved to Planned (maybe by mistake)
+  assert.equal(item.rating, 3, 'kept');
+  assert.equal(ratingOf(item), undefined, 'but hidden while in Planned');
+  assert.equal('rating' in applyChanges(item, { rating: null }), false, 'clearing still works');
+  applyChanges(item, { label: 'watched', rating: 3 });
+  assert.equal(ratingOf(item), 3, 'back once it leaves Planned');
 });

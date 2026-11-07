@@ -5,6 +5,7 @@ import { $, $$, esc, setSelected, showText } from '../lib/dom.js';
 import { poster } from '../lib/images.js';
 import { setSubTab } from '../lib/router.js';
 import { readStored, writeStored } from '../lib/storage.js';
+import { ratingOf } from '../../shared/media.js';
 import { progressSummary, statusOf } from '../../shared/progress.js';
 import { openDetail } from './detail.js';
 import { LABEL_NAMES } from './labels.js';
@@ -74,7 +75,7 @@ function card(item) {
     <button type="button" class="card" data-id="${esc(item.id)}" title="${esc(item.title)}">
       <div class="poster">
         ${item.posterPath ? `<img src="${poster(item.posterPath)}" alt="" loading="lazy">` : `<div class="no-poster">${esc(item.title)}</div>`}
-        ${ratingBadge(item.rating)}
+        ${ratingBadge(ratingOf(item))}
       </div>
       <div class="card-title">${esc(item.title)}</div>
       <div class="card-meta"><span class="label ${status}">${LABEL_NAMES[status]}</span> · ${esc(cardMeta(item))}</div>

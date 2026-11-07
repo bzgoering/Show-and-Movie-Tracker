@@ -20,6 +20,11 @@ export const EXPLORE_TABS = ['all', 'movie', 'movie-live', 'movie-animated', 'tv
 export const RATINGS = [1, 2, 3];
 export const isRating = (value) => RATINGS.includes(value);
 
+// Titles in Planned haven't been seen yet, so they can't be rated. A rating given earlier is kept
+// (in case the title was moved to Planned by mistake) but hidden and ignored until it leaves Planned.
+export const canRate = (item) => item.label !== 'planned';
+export const ratingOf = (item) => (canRate(item) ? item.rating : undefined);
+
 // A library item's id, e.g. "tmdb-tv-1396".
 export const libraryId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;
 

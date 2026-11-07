@@ -9,7 +9,7 @@
 //    kinds of title you rarely watch. The match % is that score, so it means the same thing on every tab.
 // 4. Look up where the best ones stream, and return them best match first.
 
-import { mediaKey } from '../../public/shared/media.js';
+import { mediaKey, ratingOf } from '../../public/shared/media.js';
 import { mapLimit } from '../http.js';
 import {
   calibrationShift,
@@ -235,7 +235,7 @@ export async function buildExplore({
           key: `${s.type}-${s.tmdbId}`,
           title: s.title,
           label: s.label,
-          rating: s.rating,
+          rating: ratingOf(s),
           weight: profile.liking.get(s),
         }),
       ),

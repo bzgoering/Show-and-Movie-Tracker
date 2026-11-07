@@ -4,7 +4,7 @@ import { whereToWatch } from '../components/where-to-watch.js';
 import { closeDialog, openDialog, updateDialog } from '../lib/dialog.js';
 import { $, esc, showText } from '../lib/dom.js';
 import { poster } from '../lib/images.js';
-import { LABELS_FOR, isEndedStatus } from '../../shared/media.js';
+import { canRate, isEndedStatus, LABELS_FOR } from '../../shared/media.js';
 import {
   airedSeasons,
   currentEpisode,
@@ -137,7 +137,7 @@ function render(item) {
         <h2 id="detail-title">${esc(item.title)}</h2>
         <p class="muted">${item.type === 'tv' ? 'TV show' : 'Movie'}${factText ? ` · ${esc(factText)}` : ''}</p>
         <div class="label-picker" role="group" aria-label="Label">${labels}</div>
-        ${ratingRow(item.rating)}
+        ${canRate(item) ? ratingRow(item.rating) : ''}
         ${item.overview ? `<p class="overview">${esc(item.overview)}</p>` : ''}
       </div>
     </div>

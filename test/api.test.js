@@ -378,7 +378,10 @@ test('explore says which tab it showed when the requested one is not available',
   assert.ok(body.items.every((i) => i.type === 'tv'));
 });
 
-test('rating a title and clearing it', async () => {
+test('rating a title and clearing it; Planned titles cannot be rated', async () => {
+  await call('PATCH', '/api/library/tmdb-tv-1396', { label: 'planned' });
+  assert.equal((await call('PATCH', '/api/library/tmdb-tv-1396', { rating: 3 })).status, 400, 'not while Planned');
+  await call('PATCH', '/api/library/tmdb-tv-1396', { label: 'watched' });
   const rated = await call('PATCH', '/api/library/tmdb-tv-1396', { rating: 3 });
   assert.equal(rated.body.rating, 3);
   assert.equal((await call('PATCH', '/api/library/tmdb-tv-1396', { rating: 7 })).status, 400);

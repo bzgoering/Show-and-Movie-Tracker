@@ -293,3 +293,8 @@ test('suggestions from a title you rated Great say you loved it', () => {
     'Because you loved Severance',
   );
 });
+
+test('a rating does not count while the title is in Planned', () => {
+  const planned = { type: 'movie', label: 'planned', rating: 3, cache: {} };
+  assert.equal(affinity(planned), affinity({ ...planned, rating: undefined }));
+});

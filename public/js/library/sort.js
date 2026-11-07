@@ -1,4 +1,5 @@
 // Sorting for the library grid. Pure functions, so they run in the browser and in `npm test`.
+import { ratingOf } from '../../shared/media.js';
 import { statusOf } from '../../shared/progress.js';
 
 const PROGRESS_ORDER = { watching: 0, waiting: 1, planned: 2, watched: 3 };
@@ -32,7 +33,7 @@ export const SORTS = {
   ),
   release: by(releaseDate, (a, b) => b.localeCompare(a)), // newest first
   rating: by(
-    (i) => i.rating ?? null,
+    (i) => ratingOf(i) ?? null,
     (a, b) => b - a,
   ), // Great first, unrated last
 };

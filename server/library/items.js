@@ -1,6 +1,6 @@
 // Library items: creating them, changing them, and merging in fresh TMDB info.
 // Pure functions (no file or network access), so they're easy to test.
-import { isRating, LABELS_FOR, libraryId } from '../../public/shared/media.js';
+import { canRate, isRating, LABELS_FOR, libraryId } from '../../public/shared/media.js';
 import { HttpError } from '../http.js';
 import { isRevived, predictNextRelease } from '../predict.js';
 
@@ -55,6 +55,7 @@ export function applyChanges(item, changes = {}, now = new Date()) {
   if ('rating' in changes) {
     // null clears it.
     if (changes.rating === null) delete item.rating;
+    else if (!canRate(item)) throw new HttpError(400, "Titles in Planned can't be rated until you've watched them.");
     else if (isRating(changes.rating)) item.rating = changes.rating;
     else throw new HttpError(400, 'Rating must be 1 (Meh), 2 (Good), 3 (Great), or null to clear it.');
   }

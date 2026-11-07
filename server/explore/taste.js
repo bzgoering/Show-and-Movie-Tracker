@@ -1,6 +1,7 @@
 // What your library says about your taste: how much each title counts (a show you finished says a lot,
 // one you stopped early on says little), the genres and languages you watch, and whether you lean
 // to movies or shows.
+import { ratingOf } from '../../public/shared/media.js';
 import { airedCount, latestAired, watchedCount } from '../../public/shared/progress.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,7 +48,7 @@ const RATING_WEIGHT = { 1: 0.6, 2: 1, 3: 1.3 };
 // one you're partway through, even if you haven't set episodes on it.
 export function affinity(item, options = {}) {
   const base = engagementAffinity(item, options);
-  const weight = RATING_WEIGHT[item.rating];
+  const weight = RATING_WEIGHT[ratingOf(item)]; // ratings don't count while a title is in Planned
   return weight ? Math.max(base, 0.6) * weight : base;
 }
 

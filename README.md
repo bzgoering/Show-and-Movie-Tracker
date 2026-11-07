@@ -50,7 +50,7 @@ Then restart the app (Ctrl+C in its window, then `npm start`). The page picks up
 - **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
 - If a show that ended comes back (renewed, revived or rebranded), it's moved out of Watched on the next start and shows up under Waiting again
 - Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
-- **Rate** titles with 1 to 3 stars: ★ Meh, ★★ Good, ★★★ Great. Everything in your library is something you liked, so Meh just means "not as much as the others". Rate any time from a title's details; when you finish something (mark it Watched, or press Done on a show) and haven't rated it, you're asked how it was. Rated titles show their stars on the poster.
+- **Rate** titles with 1 to 3 stars: ★ Meh, ★★ Good, ★★★ Great. Everything in your library is something you liked, so Meh just means "not as much as the others". Rate any time from a title's details once you've started or watched it (titles in Planned can't be rated; a rating given earlier is kept but hidden while a title is in Planned); when you finish something (mark it Watched, or press Done on a show) and haven't rated it, you're asked how it was. Rated titles show their stars on the poster.
 - Season and episode tracking for shows: pick the episode you're on (only episodes that have aired are listed), or "Caught up"
 - One-click buttons to mark the episode you're on as watched, or jump straight to the newest episode
 - On the last episode of a show that has ended, the button becomes **Done**, which marks it watched and moves the show to Watched
