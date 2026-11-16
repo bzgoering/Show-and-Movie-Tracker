@@ -93,12 +93,21 @@ const CATALOG = {
 
 export const calls = [];
 
-export async function search(query) {
-  calls.push(['search', query]);
+// Two results to a page, so a search that matches the whole catalog (e.g. "e") has more than one page.
+const SEARCH_PAGE_SIZE = 2;
+
+export async function search(query, page = 1) {
+  calls.push(['search', query, page]);
   const q = query.toLowerCase();
-  return Object.values(CATALOG)
+  const matches = Object.values(CATALOG)
     .map((c) => c.search)
     .filter((r) => r.title.toLowerCase().includes(q));
+  const from = (page - 1) * SEARCH_PAGE_SIZE;
+  return {
+    results: matches.slice(from, from + SEARCH_PAGE_SIZE),
+    page,
+    totalPages: Math.ceil(matches.length / SEARCH_PAGE_SIZE),
+  };
 }
 
 export async function getDetails(type, tmdbId) {

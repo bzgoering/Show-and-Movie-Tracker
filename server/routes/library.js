@@ -1,10 +1,21 @@
 // /api/search and /api/library: finding titles and managing your saved ones.
 import { Router } from 'express';
-import { libraryId, mediaKey } from '../../public/shared/media.js';
+import { libraryId, MAX_SEARCH_PAGE, mediaKey } from '../../public/shared/media.js';
 import { recordFeedback } from '../explore/index.js';
 import { asyncRoute, HttpError, parseMediaRef } from '../http.js';
 import { applyChanges, needsProviders, newItem, withPrediction } from '../library/items.js';
 import { settingsOf } from '../settings.js';
+
+const MAX_QUERY_LENGTH = 200;
+
+// The ?page= of a search: a whole number from 1 (the default). Past TMDB's last page, it's the last page.
+function parsePage(value) {
+  if (value === undefined) return 1;
+  if (typeof value !== 'string' || !/^\d{1,6}$/.test(value) || Number(value) < 1) {
+    throw new HttpError(400, 'page must be a whole number, 1 or more.');
+  }
+  return Math.min(Number(value), MAX_SEARCH_PAGE);
+}
 
 export function libraryRoutes({ store, tmdb, sync, startupSync, isOutdated }) {
   const router = Router();
@@ -14,10 +25,17 @@ export function libraryRoutes({ store, tmdb, sync, startupSync, isOutdated }) {
     '/search',
     asyncRoute(async (req, res) => {
       const q = String(req.query.q ?? '').trim();
-      if (!q) return res.json([]);
-      const [results, data] = await Promise.all([tmdb.search(q), store.read()]);
+      const page = parsePage(req.query.page);
+      if (q.length > MAX_QUERY_LENGTH) {
+        throw new HttpError(400, `Search is too long (${MAX_QUERY_LENGTH} characters at most).`);
+      }
+      if (!q) return res.json({ results: [], page, totalPages: 0 });
+      const [found, data] = await Promise.all([tmdb.search(q, page), store.read()]);
       const owned = new Set(data.items.map((i) => i.id));
-      res.json(results.map((r) => ({ ...r, inLibrary: owned.has(libraryId(r.type, r.tmdbId)) })));
+      res.json({
+        ...found,
+        results: found.results.map((r) => ({ ...r, inLibrary: owned.has(libraryId(r.type, r.tmdbId)) })),
+      });
     }),
   );
 

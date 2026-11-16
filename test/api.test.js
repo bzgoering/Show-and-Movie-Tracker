@@ -38,8 +38,102 @@ test('library starts empty', async () => {
 test('search marks what is already in the library', async () => {
   await call('POST', '/api/library', { type: 'movie', tmdbId: 27205 });
   const { body } = await call('GET', '/api/search?q=inc');
-  assert.equal(body[0].title, 'Inception');
-  assert.equal(body[0].inLibrary, true);
+  assert.equal(body.results[0].title, 'Inception');
+  assert.equal(body.results[0].inLibrary, true);
+  assert.equal(body.results[0].type, 'movie');
+  assert.deepEqual([body.page, body.totalPages], [1, 1]);
+});
+
+test('search: pages pass through to TMDB, with the page count', async () => {
+  // "e" matches all three titles in the fake catalog, two to a page.
+  const first = (await call('GET', '/api/search?q=e')).body;
+  assert.deepEqual([first.results.length, first.page, first.totalPages], [2, 1, 2]);
+  const second = (await call('GET', '/api/search?q=e&page=2')).body;
+  assert.deepEqual([second.results.length, second.page, second.totalPages], [1, 2, 2]);
+  assert.equal(second.results[0].title, 'The Last of Us');
+  assert.equal(second.results[0].inLibrary, false);
+  assert.deepEqual(fakeTmdb.calls.filter((c) => c[0] === 'search').at(-1), ['search', 'e', 2]);
+});
+
+test('search: a page past the end is empty, and a huge one is held to the last page TMDB serves', async () => {
+  const past = (await call('GET', '/api/search?q=e&page=3')).body;
+  assert.deepEqual(past.results, []);
+  const huge = (await call('GET', '/api/search?q=e&page=99999')).body;
+  assert.equal(huge.page, 500);
+});
+
+test('search: a bad page is a 400', async () => {
+  for (const page of ['0', '-1', '1.5', 'abc', '', '1e3', '2,3']) {
+    const { status, body } = await call('GET', `/api/search?q=e&page=${encodeURIComponent(page)}`);
+    assert.equal(status, 400, `page=${page}`);
+    assert.match(body.error, /page/);
+  }
+  assert.equal((await call('GET', '/api/search?q=e&page=1&page=2')).status, 400, 'repeated page');
+});
+
+test('search: nothing typed gives an empty page, and a very long search is a 400', async () => {
+  const empty = (await call('GET', '/api/search?q=%20%20')).body;
+  assert.deepEqual(empty, { results: [], page: 1, totalPages: 0 });
+  const before = fakeTmdb.calls.length;
+  const long = await call('GET', `/api/search?q=${'a'.repeat(201)}`);
+  assert.equal(long.status, 400);
+  assert.match(long.body.error, /too long/);
+  assert.equal((await call('GET', `/api/search?q=${'a'.repeat(200)}`)).status, 200, '200 characters is fine');
+  assert.equal(fakeTmdb.calls.length, before + 1, 'the long search never reached TMDB');
+});
+
+test('title details: a movie in the library, with only the fields the page needs', async () => {
+  const { status, body } = await call('GET', '/api/titles/movie/27205');
+  assert.equal(status, 200);
+  assert.deepEqual(body, {
+    type: 'movie',
+    tmdbId: 27205,
+    title: 'Inception',
+    year: 2010,
+    posterPath: '/inception.jpg',
+    overview: 'A thief who steals secrets through dreams.',
+    genres: ['Action', 'Science Fiction'],
+    status: 'Released',
+    releaseDate: '2010-07-15',
+    runtime: 148,
+    providers: {
+      link: 'https://www.themoviedb.org/movie/27205/watch',
+      stream: [],
+      rent: [{ id: 2, name: 'Apple TV', logoPath: null }],
+      buy: [],
+    },
+    region: 'US',
+    inLibrary: true,
+  });
+});
+
+test('title details: a show that is not in the library yet', async () => {
+  const { status, body } = await call('GET', '/api/titles/tv/1396');
+  assert.equal(status, 200);
+  assert.equal(body.title, 'Breaking Bad');
+  assert.equal(body.inLibrary, false);
+  assert.equal(body.numberOfSeasons, 5);
+  assert.equal(body.numberOfEpisodes, 62);
+  assert.equal(body.status, 'Ended');
+  assert.equal('cache' in body, false);
+  assert.equal('seasons' in body, false);
+  assert.equal(body.providers.stream.length, 0);
+  assert.equal(
+    (await call('GET', '/api/library')).body.items.some((i) => i.id === 'tmdb-tv-1396'),
+    false,
+    'only looks',
+  );
+});
+
+test('title details: bad type or id is a 400, and a TMDB problem comes through', async () => {
+  assert.equal((await call('GET', '/api/titles/book/27205')).status, 400);
+  assert.equal((await call('GET', '/api/titles/movie/abc')).status, 400);
+  assert.equal((await call('GET', '/api/titles/movie/0')).status, 400);
+  assert.equal((await call('GET', '/api/titles/movie/-5')).status, 400);
+  assert.equal((await call('GET', '/api/titles/movie/1.5')).status, 400);
+  const missing = await call('GET', '/api/titles/movie/999999');
+  assert.equal(missing.status, 404);
+  assert.equal(missing.body.error, 'Title not found on TMDB.');
 });
 
 test('adding a show sets defaults and a prediction', async () => {
@@ -186,7 +280,7 @@ test('a finished show that comes back moves out of Watched on refresh', async ()
     }),
   );
   const revivedTmdb = {
-    search: async () => [],
+    search: async () => ({ results: [], page: 1, totalPages: 0 }),
     getDetails: async () => ({
       title: 'New Name',
       year: 2020,

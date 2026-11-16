@@ -10,7 +10,12 @@ function stub(routes) {
   requests = [];
   globalThis.fetch = async (url, opts) => {
     const u = new URL(url);
-    requests.push({ path: u.pathname, auth: opts.headers.Authorization, apiKey: u.searchParams.get('api_key') });
+    requests.push({
+      path: u.pathname,
+      auth: opts.headers.Authorization,
+      apiKey: u.searchParams.get('api_key'),
+      page: u.searchParams.get('page'),
+    });
     const body = routes[u.pathname];
     if (!body) return new Response('{}', { status: 404 });
     return new Response(JSON.stringify(body), { status: 200 });
@@ -107,6 +112,7 @@ test('long read access tokens are sent as a Bearer header', async () => {
   process.env.TMDB_API_KEY = '"eyJ' + 'x'.repeat(60) + '"';
   stub({
     '/3/search/multi': {
+      total_pages: 3,
       results: [
         { id: 5, media_type: 'movie', title: 'M', release_date: '2020-01-01' },
         { id: 6, media_type: 'person', name: 'P' },
@@ -114,9 +120,25 @@ test('long read access tokens are sent as a Bearer header', async () => {
     },
   });
   const r = await tmdb.search('m');
-  assert.equal(r.length, 1, 'people are filtered out');
+  assert.equal(r.results.length, 1, 'people are filtered out');
   assert.equal(requests[0].auth, 'Bearer eyJ' + 'x'.repeat(60));
   assert.equal(requests[0].apiKey, null);
+});
+
+test('search asks TMDB for the page you want and says how many pages there are', async () => {
+  stub({ '/3/search/multi': { page: 2, total_pages: 7, results: [{ id: 5, media_type: 'tv', name: 'S' }] } });
+  const r = await tmdb.search('s', 2);
+  assert.equal(requests[0].page, '2');
+  assert.deepEqual([r.page, r.totalPages, r.results.length], [2, 7, 1]);
+  await tmdb.search('s');
+  assert.equal(requests[1].page, '1', 'the first page by default');
+});
+
+test('search page counts are held to the last page TMDB serves, and no results means no pages', async () => {
+  stub({ '/3/search/multi': { total_pages: 40000, results: [] } });
+  assert.equal((await tmdb.search('s')).totalPages, 500);
+  stub({ '/3/search/multi': { results: [] } });
+  assert.equal((await tmdb.search('s')).totalPages, 0);
 });
 
 test('where-to-watch keeps subscription, free and ad-supported services, without duplicates', async () => {

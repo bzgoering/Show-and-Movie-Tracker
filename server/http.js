@@ -13,11 +13,11 @@ export class HttpError extends Error {
 // Lets route handlers be async: a rejected promise goes to Express's error handler.
 export const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
 
-// Reads { type, tmdbId } from a request body, or throws a 400.
+// Reads { type, tmdbId } from a request body (or URL params), or throws a 400.
 export function parseMediaRef(body = {}) {
   const tmdbId = Number(body.tmdbId);
   if (!isMediaType(body.type) || !Number.isInteger(tmdbId) || tmdbId <= 0) {
-    throw new HttpError(400, 'Body must include type ("movie" or "tv") and a numeric tmdbId.');
+    throw new HttpError(400, 'Needs a type ("movie" or "tv") and a numeric tmdbId.');
   }
   return { type: body.type, tmdbId };
 }

@@ -42,7 +42,8 @@ Then restart the app (Ctrl+C in its window, then `npm start`). The page picks up
 
 ## Features
 
-- Search for any movie or TV show and add it with one click
+- Search for any movie or TV show and add it with one click. Click a result's poster or title to see its details first (overview, genres, run time or seasons, and where to watch), then add it as Planned or Watched. Titles already in your library open their normal details.
+- Press **Enter** in the search box to see all the results on their own page, laid out like Explore: filter by All, Movies or Shows, spot what's already in your library, open any result's details, and use **Load more** for the next page. The page has its own address (`#search/...`), so refreshing or going Back reopens the same search.
 - Sort the All tab by A–Z (default), progress (Watching → Waiting → Planned → Watched), release date (newest first) or rating (Great first)
 - Pick a genre on the All tab to see only titles in it. The list only has genres from your own library.
 - Search your own library by title (finds titles under any label, and ignores accents and punctuation)
@@ -134,7 +135,7 @@ The numbers update as you change your library. Episode lengths for shows you alr
 server/
   index.js            starts the app (reads .env, opens data/library.json)
   app.js              wires the routes together; errors become JSON responses
-  routes/             the /api endpoints: library, explore, settings
+  routes/             the /api endpoints: library, titles, explore, settings
   library/items.js    rules for library titles (create, change, merge TMDB updates)
   library/sync.js     refreshes titles from TMDB without blocking saves
   explore/            suggestions: taste.js (your library), score.js (the match %),
@@ -145,9 +146,10 @@ server/
   store.js            reads and writes data/library.json safely
 public/
   index.html, styles.css
-  shared/             code used by both the page and the server (episode progress, labels, stats)
+  shared/             code used by both the page and the server (episode progress, labels, stats, page addresses)
   js/main.js          starts the page
   js/library/         the Library page: store.js (your library in the browser), page.js, detail.js
+  js/search/          the search results page (page.js) and the details pop-up for a result (detail.js)
   js/explore/         the Explore page and its streaming-services panel
   js/account/         the Account page (your stats)
   js/lib/             small helpers (API calls, dates, the router, the details pop-up)

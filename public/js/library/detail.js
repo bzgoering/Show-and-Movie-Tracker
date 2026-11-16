@@ -141,7 +141,7 @@ function render(item) {
         ${item.overview ? `<p class="overview">${esc(item.overview)}</p>` : ''}
       </div>
     </div>
-    ${askRating === item.id && !item.rating ? ratingPrompt(item.title) : ''}
+    ${askRating === item.id && canRate(item) && !item.rating ? ratingPrompt(item.title) : ''}
     ${statusOf(item) === 'planned' && c.providers ? whereToWatch(c.providers, c.providers.region) : ''}
     ${item.type === 'tv' ? showSections(item) : ''}
     <div class="detail-actions">
@@ -153,6 +153,8 @@ function render(item) {
 function save(item, changes) {
   // Just finished it (marked Watched, or Done on a show) and haven't rated it: ask how it was.
   if (changes.label === 'watched' && item.label !== 'watched' && !item.rating) askRating = item.id;
+  // Moved off Watched (back to Planned or Watching): it's not finished any more, so stop asking.
+  else if (changes.label && changes.label !== 'watched') askRating = null;
   return library.update(item.id, changes).catch(showError);
 }
 

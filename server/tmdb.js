@@ -1,6 +1,7 @@
 // Small client for The Movie Database (TMDB) API.
 // The key stays on the server; the browser only ever talks to our own /api routes.
 
+import { MAX_SEARCH_PAGE } from '../public/shared/media.js';
 import { detectPattern } from './release.js';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -53,9 +54,10 @@ async function request(path, params = {}) {
 
 const yearOf = (date) => (date ? Number(date.slice(0, 4)) || null : null);
 
-export async function search(query) {
-  const data = await request('/search/multi', { query, include_adult: 'false', page: 1 });
-  return (data.results || [])
+// One page of movie and show matches (people are left out): { results, page, totalPages }.
+export async function search(query, page = 1) {
+  const data = await request('/search/multi', { query, include_adult: 'false', page });
+  const results = (data.results || [])
     .filter((r) => r.media_type === 'movie' || r.media_type === 'tv')
     .map((r) => ({
       tmdbId: r.id,
@@ -65,6 +67,7 @@ export async function search(query) {
       posterPath: r.poster_path || null,
       overview: r.overview || '',
     }));
+  return { results, page, totalPages: Math.min(data.total_pages || 0, MAX_SEARCH_PAGE) };
 }
 
 function episodeInfo(ep) {

@@ -26,7 +26,8 @@
           type="search"
           placeholder="Add a movie or show…"
           autocomplete="off"
-          aria-label="Search TMDB to add a movie or show"
+          maxlength="200"
+          aria-label="Search TMDB to add a movie or show (press Enter for all results)"
         />
         <ul id="search-results" class="search-results" hidden></ul>
       </div>
@@ -127,6 +128,24 @@
       <div id="account-content"></div>
     </main>
 
+    <main id="search-view" hidden>
+      <h2 id="search-title" class="page-title"></h2>
+      <div class="toolbar">
+        <nav class="filters" aria-label="Kind of result">
+          <button type="button" class="chip active" data-type="all">All</button>
+          <button type="button" class="chip" data-type="movie">Movies</button>
+          <button type="button" class="chip" data-type="tv">Shows</button>
+        </nav>
+      </div>
+
+      <p id="search-message" class="message" role="alert" hidden></p>
+      <p id="search-loading" class="empty" role="status" hidden>Searching…</p>
+      <section id="search-grid" class="grid" aria-label="Search results"></section>
+      <p id="search-empty" class="empty" hidden></p>
+      <div class="load-more"><button type="button" id="search-more" class="btn" hidden>Load more</button></div>
+      <p class="attribution">Search results from TMDB.</p>
+    </main>
+
     <div id="toast" class="toast" role="status" hidden></div>
 
     <dialog id="detail" class="detail" aria-labelledby="detail-title">
@@ -138,9 +157,21 @@
       // Show the page and tab from the address before anything is drawn, so a refresh doesn't flash
       // the Library first. Same address format as js/lib/router.js; the app takes over a moment later.
       (() => {
-        const [first, second] = location.hash.slice(1).split('/');
-        const view = ['explore', 'account'].includes(first) ? first : 'library';
-        const sub = second || 'all';
+        const text = location.hash.slice(1);
+        const slash = text.indexOf('/');
+        const first = slash === -1 ? text : text.slice(0, slash);
+        const rest = slash === -1 ? '' : text.slice(slash + 1);
+        // #search/<text> has the search text after the slash (a search with no text opens the Library).
+        let query = '';
+        if (first === 'search') {
+          try {
+            query = decodeURIComponent(rest).trim();
+          } catch {
+            query = rest.trim(); // a stray "%": use it as typed
+          }
+        }
+        const view = query ? 'search' : ['explore', 'account'].includes(first) ? first : 'library';
+        const sub = rest.split('/')[0] || 'all';
         const select = (buttons, isOn) =>
           buttons.forEach((b) => {
             b.classList.toggle('active', isOn(b));
@@ -149,8 +180,9 @@
         document.getElementById('library-view').hidden = view !== 'library';
         document.getElementById('explore-view').hidden = view !== 'explore';
         document.getElementById('account-view').hidden = view !== 'account';
-        select(document.querySelectorAll('.view-tab'), (b) => b.dataset.view === view);
-        if (view === 'account') return; // no tabs on the Account page
+        document.getElementById('search-view').hidden = view !== 'search';
+        select(document.querySelectorAll('.view-tab'), (b) => b.dataset.view === view); // none, for search
+        if (view === 'account' || view === 'search') return; // no tabs to pick here
         const chips = [
           ...document.querySelectorAll(view === 'explore' ? '.explore-types .chip' : '#library-view .chip'),
         ];

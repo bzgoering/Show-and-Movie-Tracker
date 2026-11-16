@@ -25,6 +25,9 @@ export const isRating = (value) => RATINGS.includes(value);
 export const canRate = (item) => item.label !== 'planned';
 export const ratingOf = (item) => (canRate(item) ? item.rating : undefined);
 
+// TMDB won't serve a search page past this, however many results it claims to have.
+export const MAX_SEARCH_PAGE = 500;
+
 // A library item's id, e.g. "tmdb-tv-1396".
 export const libraryId = (type, tmdbId) => `tmdb-${type}-${tmdbId}`;
 

@@ -5,6 +5,7 @@ import { createLibrarySync } from './library/sync.js';
 import { exploreRoutes } from './routes/explore.js';
 import { libraryRoutes } from './routes/library.js';
 import { settingsRoutes } from './routes/settings.js';
+import { titleRoutes } from './routes/titles.js';
 
 // The refresh started when the app starts. wait() resolves once it's done: true the first time
 // (that page load got fresh data), false after that or when there was no startup refresh.
@@ -30,6 +31,7 @@ export function createApp({ store, tmdb, publicDir, syncOnStart = false, isOutda
   if (publicDir) app.use(express.static(publicDir));
 
   app.use('/api', libraryRoutes({ store, tmdb, sync, startupSync, isOutdated }));
+  app.use('/api', titleRoutes({ store, tmdb }));
   app.use('/api', settingsRoutes({ store, tmdb }));
   app.use('/api', exploreRoutes({ store, tmdb }));
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
