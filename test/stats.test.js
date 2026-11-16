@@ -34,6 +34,7 @@ test('time per title uses TMDB runtimes, with typical lengths as a marked estima
   assert.deepEqual(timeSpent(movie('watched', 148)), { minutes: 148, estimated: false });
   assert.deepEqual(timeSpent(movie('watched', null)), { minutes: TYPICAL_MINUTES.movie, estimated: true });
   assert.deepEqual(timeSpent(movie('planned', 148)), { minutes: 0, estimated: false });
+  assert.deepEqual(timeSpent(movie('watching', 148)), { minutes: 0, estimated: false });
   assert.equal(timeSpent(show('watching', { season: 1, episode: 4 })).minutes, 4 * 50);
   const noRuntime = show('watching', { season: 1, episode: 4 });
   noRuntime.cache = { ...noRuntime.cache, episodeRuntime: null };
@@ -74,6 +75,13 @@ test('caught-up shows count as Waiting, like the Library tab', () => {
   const caughtUp = show('watching', { season: 2, episode: 10 });
   caughtUp.cache = { ...caughtUp.cache, status: 'Returning Series' };
   assert.deepEqual(libraryStats([caughtUp]).library, { watching: 0, waiting: 1, planned: 0, watched: 0 });
+});
+
+test('a movie in Watching counts as Watching but adds no time yet', () => {
+  const stats = libraryStats([movie('watching', 120)]);
+  assert.deepEqual(stats.library, { watching: 1, waiting: 0, planned: 0, watched: 0 });
+  assert.equal(stats.totalMinutes, 0);
+  assert.equal(stats.movies.watched, 0);
 });
 
 test('an empty library has nothing to add up', () => {

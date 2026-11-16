@@ -86,6 +86,7 @@ test('caught-up Watching shows with more coming show as Waiting', () => {
   assert.equal(statusOf(show({ season: 2, episode: 4 }, { kind: 'confirmed' }, 'watched')), 'watched');
   assert.equal(statusOf(show({ season: 1, episode: 0 }, { kind: 'confirmed' }, 'planned')), 'planned');
   assert.equal(statusOf({ type: 'movie', label: 'watched' }), 'watched');
+  assert.equal(statusOf({ type: 'movie', label: 'watching' }), 'watching', 'movies are never Waiting');
 });
 
 import { currentEpisode, progressForCurrent, progressSummary } from '../public/shared/progress.js';

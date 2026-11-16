@@ -107,7 +107,12 @@ test('new items: planned by default, shows start at the beginning or caught up w
   assert.deepEqual(planned.progress, { season: 1, episode: 0 });
   assert.deepEqual(newItem({ type: 'tv', tmdbId: 1, details, label: 'watched' }).progress, { season: 3, episode: 8 });
   const movie = newItem({ type: 'movie', tmdbId: 2, details, label: 'watching', fromExplore: true });
-  assert.equal(movie.label, 'planned', 'movies cannot be "watching"');
+  assert.equal(movie.label, 'watching', 'movies can be "watching"');
+  assert.equal(
+    newItem({ type: 'movie', tmdbId: 3, details, label: 'waiting' }).label,
+    'planned',
+    'unknown labels fall back to planned',
+  );
   assert.equal(movie.addedFrom, 'explore');
   assert.equal('progress' in movie, false);
 });
@@ -119,6 +124,9 @@ test('changes are validated', () => {
   const item = applyChanges(show(), { progress: { season: '5', episode: '16' }, userMarkedEnded: 1 });
   assert.deepEqual(item.progress, { season: 5, episode: 16 });
   assert.equal(item.userMarkedEnded, true);
+  const movie = () => ({ id: 'tmdb-movie-2', tmdbId: 2, type: 'movie', title: 'M', label: 'planned', cache: {} });
+  assert.equal(applyChanges(movie(), { label: 'watching' }).label, 'watching');
+  assert.throws(() => applyChanges(movie(), { label: 'waiting' }), /Label must be one of: planned, watching, watched/);
 });
 
 test('fresh TMDB info keeps your label, progress and streaming info', () => {

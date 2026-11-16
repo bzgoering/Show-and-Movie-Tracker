@@ -164,8 +164,18 @@ test('updates label, progress and ended flag, and saves them to disk', async () 
   assert.equal(saved.items.find((i) => i.id === 'tmdb-tv-100088').label, 'watching');
 });
 
+test('movies can be Watching, and Done moves them to Watched', async () => {
+  const watching = await call('PATCH', '/api/library/tmdb-movie-27205', { label: 'watching' });
+  assert.equal(watching.status, 200);
+  assert.equal(watching.body.label, 'watching');
+  const saved = JSON.parse(await fs.readFile(file, 'utf8'));
+  assert.equal(saved.items.find((i) => i.id === 'tmdb-movie-27205').label, 'watching');
+  const done = await call('PATCH', '/api/library/tmdb-movie-27205', { label: 'watched' });
+  assert.equal(done.body.label, 'watched');
+});
+
 test('rejects bad input', async () => {
-  assert.equal((await call('PATCH', '/api/library/tmdb-movie-27205', { label: 'watching' })).status, 400);
+  assert.equal((await call('PATCH', '/api/library/tmdb-movie-27205', { label: 'waiting' })).status, 400);
   assert.equal(
     (await call('PATCH', '/api/library/tmdb-tv-100088', { progress: { season: 0, episode: 1 } })).status,
     400,

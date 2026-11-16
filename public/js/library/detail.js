@@ -112,6 +112,19 @@ function showSections(item) {
     </section>`;
 }
 
+// A movie in Watching gets one button to finish it (shows get episode controls instead).
+function movieSections(item) {
+  if (item.label !== 'watching') return '';
+  return `
+    <section class="detail-section">
+      <h3>Your progress</h3>
+      <div class="row buttons">
+        <button type="button" id="movie-done" class="btn primary">Done</button>
+        <span class="muted small">Moves this movie to Watched</span>
+      </div>
+    </section>`;
+}
+
 function render(item) {
   const c = item.cache ?? {};
   const facts =
@@ -143,7 +156,7 @@ function render(item) {
     </div>
     ${askRating === item.id && canRate(item) && !item.rating ? ratingPrompt(item.title) : ''}
     ${statusOf(item) === 'planned' && c.providers ? whereToWatch(c.providers, c.providers.region) : ''}
-    ${item.type === 'tv' ? showSections(item) : ''}
+    ${item.type === 'tv' ? showSections(item) : movieSections(item)}
     <div class="detail-actions">
       <button type="button" id="refresh-btn" class="btn">Refresh info</button>
       <button type="button" id="remove-btn" class="btn danger">Remove</button>
@@ -151,7 +164,7 @@ function render(item) {
 }
 
 function save(item, changes) {
-  // Just finished it (marked Watched, or Done on a show) and haven't rated it: ask how it was.
+  // Just finished it (marked Watched, or Done on a show or movie) and haven't rated it: ask how it was.
   if (changes.label === 'watched' && item.label !== 'watched' && !item.rating) askRating = item.id;
   // Moved off Watched (back to Planned or Watching): it's not finished any more, so stop asking.
   else if (changes.label && changes.label !== 'watched') askRating = null;
@@ -191,6 +204,8 @@ async function onClick(e) {
     }
     case 'done-btn':
       return latest && save(item, { progress: latest, label: 'watched' });
+    case 'movie-done':
+      return save(item, { label: 'watched' });
     case 'latest-ep':
       return latest && setProgress(item, progressForCurrent(latest.season, latest.episode));
     case 'refresh-btn':

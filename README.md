@@ -50,8 +50,9 @@ Then restart the app (Ctrl+C in its window, then `npm start`). The page picks up
 - Poster grid of everything you've added, with filters for Watching, Waiting, Planned, Watched, Movies and Shows
 - **Waiting** holds shows you're caught up on that still have episodes or seasons coming. When a new episode comes out, the show moves back to Watching on its own.
 - If a show that ended comes back (renewed, revived or rebranded), it's moved out of Watched on the next start and shows up under Waiting again
-- Labels on each title instead of separate lists: movies use Planned/Watched, shows use Planned/Watching/Watched
-- **Rate** titles with 1 to 3 stars: ★ Meh, ★★ Good, ★★★ Great. Everything in your library is something you liked, so Meh just means "not as much as the others". Rate any time from a title's details once you've started or watched it (titles in Planned can't be rated; a rating given earlier is kept but hidden while a title is in Planned); when you finish something (mark it Watched, or press Done on a show) and haven't rated it, you're asked how it was. Rated titles show their stars on the poster.
+- Labels on each title instead of separate lists: Planned, Watching and Watched, for movies and shows alike
+- A movie in **Watching** has a **Done** button that moves it to Watched.
+- **Rate** titles with 1 to 3 stars: ★ Meh, ★★ Good, ★★★ Great. Everything in your library is something you liked, so Meh just means "not as much as the others". Rate any time from a title's details once you've started or watched it (titles in Planned can't be rated; a rating given earlier is kept but hidden while a title is in Planned); when you finish something (mark it Watched, or press Done on a show or movie) and haven't rated it, you're asked how it was. Rated titles show their stars on the poster.
 - Season and episode tracking for shows: pick the episode you're on (only episodes that have aired are listed), or "Caught up"
 - One-click buttons to mark the episode you're on as watched, or jump straight to the newest episode
 - On the last episode of a show that has ended, the button becomes **Done**, which marks it watched and moves the show to Watched
@@ -82,7 +83,7 @@ The **Explore** tab suggests movies and shows you'll probably like, best match f
 
 **How much each title in your library counts.** Explore looks at what you've actually done with each title, not just its label:
 
-- A show you finished (or are caught up on, including **Waiting**) counts most. A movie you watched counts a little less, since it's a smaller commitment.
+- A show you finished (or are caught up on, including **Waiting**) counts most. A movie you watched counts a little less, since it's a smaller commitment. A movie you're still watching counts the same as a planned one until you mark it Watched.
 - A show you're partway through counts more the further in you are.
 - A show that looks dropped (stuck near the start and untouched for two months) barely counts, and isn't used to find suggestions. If you never set episodes on any show, this check is skipped.
 - Planned titles show what you're curious about, so they count a little. Ones you saved from Explore count even less, so Explore doesn't just hear its own suggestions back.
@@ -111,7 +112,7 @@ Streaming info comes from [JustWatch](https://www.justwatch.com/) through TMDB.
 
 There's nothing to sign in to, since your library lives on your own computer. The **Account** tab is where your stats are:
 
-- **Time spent watching**: all time, shows and movies, worked out from TMDB run times. A show counts every episode up to the one you're on (all aired episodes once it's Watched), and a movie counts once it's Watched. Planned titles don't count.
+- **Time spent watching**: all time, shows and movies, worked out from TMDB run times. A show counts every episode up to the one you're on (all aired episodes once it's Watched), and a movie counts once it's Watched (not while it's in Watching). Planned titles don't count.
 - If TMDB doesn't list a run time, a typical length is used instead (45 minutes an episode, 24 for anime and cartoons, 110 for a movie), and the page says how many titles were estimated
 - How many titles are under each Library tab (Watching, Waiting, Planned, Watched)
 - How many titles you've rated Great, Good and Meh

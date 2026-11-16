@@ -1,8 +1,8 @@
 // Facts about titles shared by the browser and the server, so both sides agree on them.
 
-// Labels a title can have. Movies are either still to watch or watched; shows can be in progress.
+// Labels a title can have: still to watch, in progress, or watched. Shows in progress can also show as "Waiting" (see statusOf).
 export const LABELS_FOR = {
-  movie: ['planned', 'watched'],
+  movie: ['planned', 'watching', 'watched'],
   tv: ['planned', 'watching', 'watched'],
 };
 
